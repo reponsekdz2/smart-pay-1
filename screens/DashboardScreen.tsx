@@ -1,9 +1,10 @@
-import React from 'react';
-import { Bell, ScanLine, ArrowUpRight, Download, SlidersHorizontal, ArrowDownLeft, ShoppingCart, Power, HelpCircle, TrendingUp } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Bell, ScanLine, ArrowUpRight, Download, SlidersHorizontal, ArrowDownLeft, ShoppingCart, Power, HelpCircle } from 'lucide-react';
 import Card from '../components/Card';
 import type { Transaction, TransactionIconType } from '../types';
 import { useUserStore } from '../hooks/useUserStore';
 import { Link } from 'react-router-dom';
+import FinancialHealthChart from '../components/charts/FinancialHealthChart';
 
 const QuickActionButton: React.FC<{ icon: React.ElementType; label: string; to?: string }> = ({ icon: Icon, label, to }) => {
     const content = (
@@ -49,6 +50,21 @@ const TransactionItem: React.FC<{ transaction: Transaction }> = ({ transaction }
 const DashboardScreen: React.FC = () => {
     const { user } = useUserStore();
 
+    const financialHealthScore = useMemo(() => {
+        const income = user.transactions
+            .filter(tx => tx.amount > 0)
+            .reduce((sum, tx) => sum + tx.amount, 0);
+
+        const spending = user.transactions
+            .filter(tx => tx.amount < 0)
+            .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+        
+        if (income + spending === 0) return 75; // Default score
+        
+        return Math.round((income / (income + spending)) * 100);
+    }, [user.transactions]);
+
+
     return (
         <div className="bg-background min-h-full">
             <header className="bg-surface p-4 flex justify-between items-center">
@@ -70,16 +86,13 @@ const DashboardScreen: React.FC = () => {
             </header>
 
             <main className="p-4 space-y-6">
-                <Card className="bg-gradient-to-br from-primaryDark to-primary text-white">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-sm opacity-80">Total Balance</p>
-                            <p className="text-4xl font-bold mt-1 tracking-tight">{user.balance.toLocaleString()} RWF</p>
-                        </div>
-                        <div className="flex items-center space-x-1 bg-white/20 px-2 py-1 rounded-full text-xs font-medium">
-                            <TrendingUp className="w-4 h-4"/>
-                            <span>+2.5%</span>
-                        </div>
+                <Card className="bg-gradient-to-br from-primaryDark to-primary text-white flex items-center justify-between">
+                    <div className="flex-1">
+                        <p className="text-sm opacity-80">Total Balance</p>
+                        <p className="text-4xl font-bold mt-1 tracking-tight">{user.balance.toLocaleString()} RWF</p>
+                    </div>
+                    <div className="w-24 h-24 -mr-2">
+                        <FinancialHealthChart score={financialHealthScore} />
                     </div>
                 </Card>
 

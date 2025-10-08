@@ -1,8 +1,7 @@
-
 import React from 'react';
 import Header from '../components/Header';
 import Card from '../components/Card';
-import InvestmentPieChart from '../components/charts/InvestmentPieChart';
+import PortfolioDonutChart from '../components/charts/PortfolioDonutChart';
 import { mockInvestmentGoals, investmentPortfolioData } from '../constants';
 import type { InvestmentGoal } from '../types';
 
@@ -48,7 +47,7 @@ const InvestScreen: React.FC = () => {
             <div className="p-4 space-y-6">
                 <Card>
                     <h2 className="font-bold text-lg text-textPrimary mb-2">Investment Portfolio</h2>
-                    <InvestmentPieChart data={updatedPortfolioData} />
+                    <PortfolioDonutChart data={updatedPortfolioData} />
                 </Card>
 
                 <Card>
