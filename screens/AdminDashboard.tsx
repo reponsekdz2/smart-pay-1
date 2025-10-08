@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import Card from '../components/Card';
 import Header from '../components/Header';
@@ -26,8 +27,10 @@ const AdminDashboard: React.FC = () => {
         const fetchData = async () => {
             try {
                 const response = await apiGateway.admin.getBusinessIntelligence();
-                if (response.success) {
+                if (response.success && response.data) {
                     setBiData(response.data);
+                } else {
+                    setError(response.error || 'Failed to fetch data');
                 }
             } catch (err: any) {
                 setError(err.message);

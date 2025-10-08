@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 // FIX: Add .ts extension to file paths
 import { useUserStore } from '../../hooks/useUserStore.ts';

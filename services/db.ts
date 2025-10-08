@@ -1,3 +1,4 @@
+
 import type { User, Wallet, Transaction, InsurancePolicy, SavingsGoal } from '../types.ts';
 import { MOCK_INSURANCE_POLICIES } from '../constants/insuranceData.ts';
 

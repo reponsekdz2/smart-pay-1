@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
-import { useUserStore } from '../hooks/useUserStore';
+import { useUserStore } from '../hooks/useUserStore.ts';
 import { ArrowLeft, LogOut } from 'lucide-react';
 import ThemeSwitcher from '../components/ThemeSwitcher';
 import Card from '../components/Card';

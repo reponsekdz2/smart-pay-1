@@ -1,3 +1,4 @@
+
 import type { ApiResponse, User, SavingsGoal } from '../types.ts';
 import { MOCK_USER_DB_TYPE } from './db.ts';
 import { decodeToken } from './authService.ts';

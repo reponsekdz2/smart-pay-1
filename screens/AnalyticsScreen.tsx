@@ -1,13 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../components/Card';
-import { FinancialHealthChart } from '../components/charts/FinancialHealthChart';
+import { FinancialHealthChart } from '../components/charts/FinancialHealthChart.tsx';
 import { SpendingByCategoryChart, IncomeExpenseChart } from '../components/charts/FinancialCharts.tsx';
-import { apiGateway } from '../services/apiGateway';
-import { useUserStore } from '../hooks/useUserStore';
-import type { FinancialInsights } from '../types';
+import { apiGateway } from '../services/apiGateway.ts';
+import { useUserStore } from '../hooks/useUserStore.ts';
+import type { FinancialInsights } from '../types.ts';
 
 const AnalyticsScreen: React.FC = () => {
     const navigate = useNavigate();

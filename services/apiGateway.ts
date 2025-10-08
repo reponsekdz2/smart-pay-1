@@ -1,50 +1,57 @@
+
+import { MOCK_DB } from './db.ts';
 import { AuthService } from './authService.ts';
 import { WalletService } from './walletService.ts';
-import { SavingsService } from './savingsService.ts';
-import { InsuranceService } from './insuranceService.ts';
 import { PaymentService } from './paymentService.ts';
-import { AdminService } from './adminService.ts';
+import { ComplianceService } from './complianceService.ts';
+import { InsuranceService } from './insuranceService.ts';
+import { SavingsService } from './savingsService.ts';
 import { AnalyticsService } from './analyticsService.ts';
-import { AIService } from './aiService.ts';
-import { MOCK_DB } from './db.ts';
+import { AdminService } from './adminService.ts';
 
-/**
- * @class ApiGateway
- * This class acts as a single entry point for all frontend requests,
- * simulating a real API Gateway that would route requests to different microservices.
- */
-class ApiGateway {
-    public auth: AuthService;
-    public wallet: WalletService;
-    public savings: SavingsService;
-    public insurance: InsuranceService;
-    public payment: PaymentService;
-    public admin: AdminService;
-    public analytics: AnalyticsService;
-    public ai: AIService;
+// Instantiate services
+const complianceService = new ComplianceService();
+const authService = new AuthService(MOCK_DB);
+const walletService = new WalletService(MOCK_DB);
+const paymentService = new PaymentService(MOCK_DB, complianceService);
+const insuranceService = new InsuranceService(MOCK_DB);
+const savingsService = new SavingsService(MOCK_DB);
+const analyticsService = new AnalyticsService(MOCK_DB);
+const adminService = new AdminService(MOCK_DB);
 
-    constructor() {
-        this.auth = new AuthService();
-        this.wallet = new WalletService(MOCK_DB);
-        this.savings = new SavingsService(MOCK_DB);
-        this.insurance = new InsuranceService(MOCK_DB);
-        this.payment = new PaymentService();
-        this.admin = new AdminService(MOCK_DB);
-        this.analytics = new AnalyticsService(MOCK_DB);
-        this.ai = new AIService();
-    }
+// The Gateway itself
+export const apiGateway = {
+    auth: {
+        login: authService.login.bind(authService),
+        register: authService.register.bind(authService),
+        getProfile: authService.getProfile.bind(authService),
+    },
+    wallet: {
+        getWallet: walletService.getWalletByUserId.bind(walletService),
+        getTransactions: walletService.getTransactionsByUserId.bind(walletService),
+    },
+    payment: {
+        sendMoney: paymentService.sendMoney.bind(paymentService),
+    },
+    insurance: {
+        getPoliciesByUserId: insuranceService.getPoliciesByUserId.bind(insuranceService),
+    },
+    savings: {
+        getGoalsByUserId: savingsService.getGoalsByUserId.bind(savingsService),
+    },
+    analytics: {
+        getFinancialInsights: analyticsService.getFinancialInsights.bind(analyticsService),
+    },
+    admin: {
+        getBusinessIntelligence: adminService.getBusinessIntelligence.bind(adminService),
+    },
     
-    /**
-     * Propagates the auth token to all services that require it.
-     * @param token The JWT token string.
-     */
-    setAuthToken(token: string | null) {
-        this.wallet.setAuthToken(token);
-        this.savings.setAuthToken(token);
-        this.insurance.setAuthToken(token);
-        this.admin.setAuthToken(token);
-        // Add other services that need auth here
+    // This function allows the auth token to be passed down to all services that need it.
+    setAuthToken: (token: string | null) => {
+        walletService.setAuthToken(token);
+        paymentService.setAuthToken(token);
+        insuranceService.setAuthToken(token);
+        savingsService.setAuthToken(token);
+        adminService.setAuthToken(token);
     }
-}
-
-export const apiGateway = new ApiGateway();
+};

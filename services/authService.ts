@@ -1,76 +1,94 @@
-import type { ApiResponse, User, RegisterDto, LoginDto } from '../types.ts';
-import { MOCK_DB } from './db.ts';
 
-// In a real app, this would be a secret key from env variables.
-const JWT_SECRET = 'your-super-secret-key-for-smart-pay-rwanda';
+import type { ApiResponse, LoginDto, RegisterDto, User } from '../types.ts';
+import { MOCK_DB, MOCK_USER_DB_TYPE } from './db.ts';
+import { MOCK_API_DELAY } from '../constants/config.ts';
+import { notificationService } from './notificationService.ts';
 
-// --- JWT Simulation ---
-// These are simple base64 stubs and not real JWTs.
-export const createToken = (payload: { sub: string, name: string, isAdmin?: boolean }): string => {
+// In-memory token store for simulation
+const tokenStore: { [userId: string]: string } = {};
+
+// Super simple mock JWT functions. DO NOT USE IN PRODUCTION.
+const createToken = (payload: { sub: string, name: string, isAdmin: boolean }) => {
     const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
     const pl = btoa(JSON.stringify(payload));
-    // No signature for this mock
-    return `${header}.${pl}.signature`;
+    return `${header}.${pl}.${btoa('secret')}`;
 };
 
-export const decodeToken = (token: string): { sub: string, name: string, isAdmin?: boolean } => {
+export const decodeToken = (token: string): { sub: string, name: string, isAdmin: boolean } => {
     try {
-        const parts = token.split('.');
-        return JSON.parse(atob(parts[1]));
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload;
     } catch (e) {
-        throw new Error('Invalid token');
+        throw new Error("Invalid token");
     }
 };
 
-/**
- * @class AuthService
- * Simulates the backend authentication microservice.
- */
 export class AuthService {
-    async register(data: RegisterDto): Promise<ApiResponse<User>> {
-        console.log("AUTH_SERVICE: Registering user", data.phone);
-        await new Promise(resolve => setTimeout(resolve, 300));
+    private db: MOCK_USER_DB_TYPE;
 
-        if (MOCK_DB.users.some(u => u.phone === data.phone)) {
-            return { success: false, error: 'Phone number is already registered.' };
-        }
-        
-        const newUser: User = {
-            id: `user-${Date.now()}`,
-            createdAt: new Date().toISOString(),
-            ...data
-        };
-        MOCK_DB.users.push(newUser);
-        
-        const newWallet = { id: `wallet-${newUser.id}`, userId: newUser.id, balance: 0, currency: 'RWF' as const };
-        MOCK_DB.wallets.push(newWallet);
-        
-        return { success: true, data: newUser };
+    constructor(db: MOCK_USER_DB_TYPE) {
+        this.db = db;
     }
 
-    async login({ phone, pin }: LoginDto): Promise<ApiResponse<{ token: string, user: User }>> {
-        console.log("AUTH_SERVICE: Logging in user", phone);
-        await new Promise(resolve => setTimeout(resolve, 300));
+    async login(credentials: LoginDto): Promise<ApiResponse<{ token: string; user: User }>> {
+        console.log("AUTH_SERVICE: Attempting login for", credentials.phone);
+        await new Promise(resolve => setTimeout(resolve, MOCK_API_DELAY));
         
-        const user = MOCK_DB.users.find(u => u.phone === phone);
-        
-        if (!user || user.pin !== pin) {
-            return { success: false, error: 'Invalid phone number or PIN.' };
+        const user = this.db.users.find(u => u.phone === credentials.phone && u.pin === credentials.pin);
+
+        if (!user) {
+            return { success: false, error: "Invalid phone number or PIN." };
         }
 
         const token = createToken({ sub: user.id, name: user.name, isAdmin: user.isAdmin });
-        
+        tokenStore[user.id] = token;
+
+        console.log("AUTH_SERVICE: Login successful for", user.name);
         return { success: true, data: { token, user } };
     }
 
-    async me(token: string): Promise<ApiResponse<User>> {
+    async register(data: RegisterDto): Promise<ApiResponse<User>> {
+         console.log("AUTH_SERVICE: Attempting registration for", data.phone);
+         await new Promise(resolve => setTimeout(resolve, MOCK_API_DELAY));
+
+        if (this.db.users.some(u => u.phone === data.phone)) {
+            return { success: false, error: "Phone number already registered." };
+        }
+
+        const newUser: User = {
+            id: `user-${Date.now()}`,
+            ...data,
+            name: data.name,
+            nationalId: data.nationalId,
+            pin: data.pin,
+            phone: data.phone,
+            createdAt: new Date().toISOString(),
+            isAdmin: false,
+        };
+
+        this.db.users.push(newUser);
+
+        // Create a wallet for the new user
+        const newWallet = {
+            id: `wallet-${newUser.id}`,
+            userId: newUser.id,
+            balance: 0, // Start with a zero balance
+            currency: 'RWF' as const,
+        };
+        this.db.wallets.push(newWallet);
+        
+        console.log("AUTH_SERVICE: Registration successful for", newUser.name);
+        notificationService.notify(newUser.id, 'Welcome to Smart Pay!', 'success');
+        return { success: true, data: newUser };
+    }
+
+    getProfile(token: string): User | null {
         try {
-            const decoded = decodeToken(token);
-            const user = MOCK_DB.users.find(u => u.id === decoded.sub);
-            if (!user) return { success: false, error: 'User not found' };
-            return { success: true, data: user };
+            const payload = decodeToken(token);
+            const user = this.db.users.find(u => u.id === payload.sub);
+            return user || null;
         } catch (e) {
-            return { success: false, error: 'Invalid or expired token.' };
+            return null;
         }
     }
 }

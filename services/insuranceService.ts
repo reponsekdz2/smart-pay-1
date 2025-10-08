@@ -1,3 +1,4 @@
+
 // FIX: Add .ts extension to file paths
 import type { ApiResponse, User, InsurancePolicy } from '../types.ts';
 import { MOCK_USER_DB_TYPE } from './db.ts';

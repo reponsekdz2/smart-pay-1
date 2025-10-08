@@ -1,3 +1,4 @@
+
 // FIX: Add .ts extension to file path
 import type { PaymentProvider } from "../types.ts";
 

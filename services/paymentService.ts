@@ -1,57 +1,55 @@
-import type { ApiResponse, Transaction } from '../types.ts';
-import { MOCK_DB } from './db.ts';
+
+import type { ApiResponse, SendMoneyDto, Transaction, User } from '../types.ts';
+import { MOCK_USER_DB_TYPE } from './db.ts';
+import { decodeToken } from './authService.ts';
 import { ComplianceService } from './complianceService.ts';
 import { notificationService } from './notificationService.ts';
 
-interface SendMoneyDto {
-    fromUserId: string;
-    toPhone: string;
-    amount: number;
-    description: string;
-}
-
-/**
- * @class PaymentService
- * Simulates the backend payments microservice.
- */
 export class PaymentService {
+    private db: MOCK_USER_DB_TYPE;
     private complianceService: ComplianceService;
+    private authToken: string | null = null;
 
-    constructor() {
-        this.complianceService = new ComplianceService();
+    constructor(db: MOCK_USER_DB_TYPE, complianceService: ComplianceService) {
+        this.db = db;
+        this.complianceService = complianceService;
     }
 
-    async sendMoney(data: SendMoneyDto): Promise<ApiResponse<Transaction>> {
-        console.log(`PAYMENT_SERVICE: Initiating transfer from ${data.fromUserId} to ${data.toPhone}`);
-        
-        const fromWallet = MOCK_DB.wallets.find(w => w.userId === data.fromUserId);
-        const toUser = MOCK_DB.users.find(u => u.phone === data.toPhone);
-        
-        if (!fromWallet) return { success: false, error: "Sender wallet not found." };
-        if (!toUser) return { success: false, error: "Recipient not found." };
-        
-        const toWallet = MOCK_DB.wallets.find(w => w.userId === toUser.id);
-        if (!toWallet) return { success: false, error: "Recipient wallet not found." };
+    setAuthToken(token: string | null) {
+        this.authToken = token;
+    }
 
-        if (fromWallet.balance < data.amount) {
-            return { success: false, error: "Insufficient funds." };
-        }
+    private getAuthenticatedUser(): User {
+        if (!this.authToken) throw new Error("Unauthorized");
+        const payload = decodeToken(this.authToken);
+        const user = this.db.users.find(u => u.id === payload.sub);
+        if (!user) throw new Error("User not found");
+        return user;
+    }
+    
+    async sendMoney(payload: SendMoneyDto): Promise<ApiResponse<Transaction>> {
+        const fromUser = this.getAuthenticatedUser();
+        if (fromUser.id !== payload.fromUserId) throw new Error("Forbidden");
 
-        const fee = data.amount * 0.01; // 1% fee
-        const totalDeducted = data.amount + fee;
+        const fromWallet = this.db.wallets.find(w => w.userId === fromUser.id);
+        const toUser = this.db.users.find(u => u.phone === payload.toPhone);
 
-        if (fromWallet.balance < totalDeducted) {
-            return { success: false, error: "Insufficient funds to cover fee." };
-        }
+        if (!toUser) return { success: false, error: 'Recipient phone number not found.' };
+        const toWallet = this.db.wallets.find(w => w.userId === toUser.id);
+
+        if (!fromWallet || !toWallet) return { success: false, error: 'Wallet error.' };
+        if (fromWallet.balance < payload.amount) return { success: false, error: 'Insufficient funds.' };
+
+        const fee = payload.amount > 100000 ? 500 : 100; // Simplified fee logic
 
         const newTransaction: Transaction = {
             id: `tx-${Date.now()}`,
             fromWalletId: fromWallet.id,
             toWalletId: toWallet.id,
-            amount: data.amount,
-            fee: fee,
+            amount: payload.amount,
+            fee,
             currency: 'RWF',
-            description: data.description,
+            description: payload.description,
             status: 'PENDING',
             createdAt: new Date().toISOString(),
         };
@@ -59,19 +57,19 @@ export class PaymentService {
         const complianceCheck = await this.complianceService.screenTransaction(newTransaction);
         if (!complianceCheck.passed) {
             newTransaction.status = 'FLAGGED';
-            MOCK_DB.transactions.unshift(newTransaction);
-             notificationService.notify(data.fromUserId, `Your transaction to ${toUser.name} is under review.`, 'info');
-            return { success: false, error: `Transaction flagged for review: ${complianceCheck.failedChecks.join(', ')}` };
+            this.db.transactions.push(newTransaction);
+            notificationService.notify(fromUser.id, 'Your transaction has been flagged for review.', 'info');
+            return { success: false, error: `Transaction flagged: ${complianceCheck.failedChecks.join(', ')}` };
         }
         
         // Atomic update simulation
-        fromWallet.balance -= totalDeducted;
-        toWallet.balance += data.amount;
+        fromWallet.balance -= (payload.amount + fee);
+        toWallet.balance += payload.amount;
         newTransaction.status = 'COMPLETED';
+        this.db.transactions.push(newTransaction);
 
-        MOCK_DB.transactions.unshift(newTransaction);
-
-        notificationService.notify(toUser.id, `You have received ${data.amount} RWF from ${MOCK_DB.users.find(u => u.id === data.fromUserId)?.name}.`, 'success');
+        notificationService.notify(fromUser.id, `You sent ${payload.amount} RWF to ${toUser.name}.`, 'success');
+        notificationService.notify(toUser.id, `You received ${payload.amount} RWF from ${fromUser.name}.`, 'success');
 
         return { success: true, data: newTransaction };
     }

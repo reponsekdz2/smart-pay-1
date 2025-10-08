@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import Card from '../components/Card';
@@ -37,7 +38,7 @@ const SavingsScreen: React.FC = () => {
             if (!user) return;
             try {
                 const res = await apiGateway.savings.getGoalsByUserId(user.id);
-                if (res.success) {
+                if (res.success && res.data) {
                     setGoals(res.data);
                 }
             } catch (err) {

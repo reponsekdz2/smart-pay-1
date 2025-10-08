@@ -1,5 +1,7 @@
+
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+// FIX: Add .ts extension to file path
 import { useUserStore } from './hooks/useUserStore.ts';
 
 // Layouts
@@ -7,11 +9,13 @@ import MainAppLayout from './layouts/MainAppLayout.tsx';
 import AdminLayout from './layouts/AdminLayout.tsx';
 
 // Screens
+// FIX: Add .tsx extension to file path
 import DashboardScreen from './screens/DashboardScreen.tsx';
 import PaymentsScreen from './screens/PaymentsScreen.tsx';
 import InsuranceScreen from './screens/InsuranceScreen.tsx';
 import InvestScreen from './screens/InvestScreen.tsx';
 import ProfileScreen from './screens/ProfileScreen.tsx';
+// FIX: Add .tsx extension to file path
 import SendMoneyScreen from './screens/SendMoneyScreen.tsx';
 import TopUpScreen from './screens/TopUpScreen.tsx';
 import QRScannerScreen from './screens/QRScannerScreen.tsx';
