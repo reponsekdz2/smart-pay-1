@@ -22,7 +22,6 @@ const OnboardingFlow: React.FC = () => {
 
 // --- Multi-Step Registration Component ---
 const RegisterFlow: React.FC = () => {
-    const navigate = useNavigate();
     const [step, setStep] = useState(1);
     const [regData, setRegData] = useState<any>({});
 
@@ -37,7 +36,7 @@ const RegisterFlow: React.FC = () => {
         case 2:
             return <PinCreationScreen onNext={(pin) => handleNext({ pin })} />;
         case 3:
-            return <KycScreen regData={regData} onNext={() => navigate('/auth/login', {replace: true})} />;
+            return <KycScreen regData={regData} />;
         default:
             return <PhoneVerificationScreen onNext={(phone) => handleNext({ phone })} />;
     }

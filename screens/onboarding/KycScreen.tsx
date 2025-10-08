@@ -1,20 +1,22 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { CheckCircle } from 'lucide-react';
 // FIX: Add .ts extension to file paths
 import { useUserStore } from '../../hooks/useUserStore.ts';
 import type { RegisterDto } from '../../types.ts';
 
 interface KycScreenProps {
     regData: Partial<RegisterDto>;
-    onNext: () => void;
 }
 
-const KycScreen: React.FC<KycScreenProps> = ({ regData, onNext }) => {
-    const { register, error } = useUserStore();
+const KycScreen: React.FC<KycScreenProps> = ({ regData }) => {
+    const { register, login, error: storeError } = useUserStore();
+    const navigate = useNavigate();
     const [name, setName] = useState('');
     const [nationalId, setNationalId] = useState('');
     const [formError, setFormError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -37,15 +39,42 @@ const KycScreen: React.FC<KycScreenProps> = ({ regData, onNext }) => {
 
         try {
             await register(finalData);
-            alert('Registration Successful! Please log in.');
-            onNext(); // Navigate to login
+            await login({ phone: finalData.phone!, pin: finalData.pin! });
+            setIsSuccess(true);
         } catch (e) {
-            // Error is handled in the store, but we can also set local form error
-            setFormError(error || 'An unexpected error occurred.');
+            setFormError(storeError || 'An unexpected error occurred.');
         } finally {
             setIsLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (isSuccess) {
+            const timer = setTimeout(() => {
+                navigate('/', { replace: true });
+            }, 4000); // Redirect after showing the success message
+            return () => clearTimeout(timer);
+        }
+    }, [isSuccess, navigate]);
+
+    if (isSuccess) {
+        return (
+            <div className="p-6 flex flex-col h-full bg-backgroundDark text-white items-center justify-center text-center animate-fade-in-down">
+                <CheckCircle className="w-24 h-24 text-success mb-4" />
+                <h1 className="text-3xl font-bold text-white">Welcome Aboard!</h1>
+                <p className="text-gray-300 mt-2 mb-8">Your Smart Pay PRO account is ready.</p>
+                
+                <div className="text-left bg-black/20 p-4 rounded-lg w-full space-y-2">
+                    <h2 className="font-semibold text-lg text-primaryLight mb-3">Unlock Powerful PRO Features:</h2>
+                    <p className="flex items-start"><span className="text-accent mr-2">⚡</span> Automate your savings & bill payments.</p>
+                    <p className="flex items-start"><span className="text-accent mr-2">🧠</span> Get AI-powered advice from Quantum Advisor.</p>
+                    <p className="flex items-start"><span className="text-accent mr-2">👥</span> Join exclusive financial communities.</p>
+                </div>
+
+                <p className="mt-8 text-gray-400 text-sm">Redirecting to your dashboard...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="p-6 flex flex-col h-full bg-backgroundDark text-white">
@@ -81,7 +110,7 @@ const KycScreen: React.FC<KycScreenProps> = ({ regData, onNext }) => {
                     </div>
                 </div>
 
-                {(formError || error) && <p className="mt-4 text-sm text-error">{formError || error}</p>}
+                {(formError || storeError) && <p className="mt-4 text-sm text-error">{formError || storeError}</p>}
                 
                 <div className="flex-grow" />
                 <button type="submit" disabled={isLoading} className="w-full bg-primary text-white font-bold py-4 rounded-lg hover:bg-primaryDark disabled:bg-primary/50">
