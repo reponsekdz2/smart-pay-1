@@ -99,8 +99,7 @@ const Main: React.FC = () => {
         return (
              <div className="max-w-md mx-auto h-screen bg-backgroundDark font-sans flex flex-col">
                 <Routes>
-                    <Route path="/onboarding/*" element={<OnboardingFlow />} />
-                    <Route path="*" element={<Navigate to="/onboarding" />} />
+                    <Route path="/*" element={<OnboardingFlow />} />
                 </Routes>
             </div>
         );
@@ -157,6 +156,15 @@ const Main: React.FC = () => {
     );
 };
 
+// --- PLACEHOLDER MERCHANT SCREENS to fix navigation ---
+const PlaceholderScreen: React.FC<{ title: string }> = ({ title }) => (
+    <div className="p-4 bg-background dark:bg-gray-900 h-full">
+        <h1 className="text-2xl font-bold text-textPrimary dark:text-white">{title}</h1>
+        <p className="text-textSecondary dark:text-gray-400 mt-2">This feature is under construction.</p>
+    </div>
+);
+
+
 const MerchantApp: React.FC = () => {
     const location = useLocation();
     const pathsWithoutNav = ['/some-merchant-path'];
@@ -175,7 +183,9 @@ const MerchantApp: React.FC = () => {
             <div className="flex-grow overflow-y-auto">
                 <Routes>
                     <Route path="/merchant/dashboard" element={<MerchantDashboardScreen />} />
-                    {/* Add other merchant routes here */}
+                    <Route path="/merchant/inventory" element={<PlaceholderScreen title="Inventory Management" />} />
+                    <Route path="/merchant/crm" element={<PlaceholderScreen title="Customer Management" />} />
+                    <Route path="/merchant/invoices" element={<PlaceholderScreen title="Invoices" />} />
                     <Route path="/profile" element={<ProfileScreen />} />
                     <Route path="*" element={<Navigate to="/merchant/dashboard" />} />
                 </Routes>

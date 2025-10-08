@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from 'react';
-// FIX: Imported the 'Users' icon to resolve the 'Cannot find name' error.
 import { Bell, ScanLine, ArrowUpRight, Download, SlidersHorizontal, ArrowDownLeft, ShoppingCart, Power, HelpCircle, Bot, Sparkles, TrendingUp, AlertTriangle, Users, Cpu } from 'lucide-react';
 import Card from '../components/Card';
 import type { Transaction, TransactionIconType, PredictiveInsight } from '../types';
@@ -84,19 +83,27 @@ const DashboardScreen: React.FC = () => {
     const [isAssistantOpen, setAssistantOpen] = useState(false);
     const navigate = useNavigate();
 
+    const transactions = user?.transactions ?? [];
+
     const financialHealthScore = useMemo(() => {
-        const income = user.transactions
+        if (!transactions.length) return 75;
+
+        const income = transactions
             .filter(tx => tx.amount > 0)
             .reduce((sum, tx) => sum + tx.amount, 0);
 
-        const spending = user.transactions
+        const spending = transactions
             .filter(tx => tx.amount < 0)
             .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
         
         if (income + spending === 0) return 75;
         
         return Math.round((income / (income + spending)) * 100);
-    }, [user.transactions]);
+    }, [transactions]);
+
+    if (!user) {
+        return <div className="p-4">Loading user data...</div>;
+    }
 
     return (
         <div className="bg-background dark:bg-gray-900 min-h-full relative pb-24">
@@ -160,14 +167,14 @@ const DashboardScreen: React.FC = () => {
                 <div>
                     <h2 className="font-bold text-lg text-textPrimary dark:text-gray-100 mb-2 px-1">Recent Transactions</h2>
                     <Card>
-                        {user.transactions.length > 0 ? (
+                        {transactions.length > 0 ? (
                              <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {user.transactions.slice(0, 3).map(tx => <TransactionItem key={tx.id} transaction={tx} />)}
+                                {transactions.slice(0, 3).map(tx => <TransactionItem key={tx.id} transaction={tx} />)}
                             </div>
                         ) : (
                             <p className="text-center text-textSecondary dark:text-gray-400 py-4">No transactions yet.</p>
                         )}
-                        {user.transactions.length > 3 && (
+                        {transactions.length > 3 && (
                              <button className="w-full text-center text-primary font-semibold pt-3">View All</button>
                         )}
                     </Card>

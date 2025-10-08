@@ -181,7 +181,7 @@ export interface Course {
 }
 
 export interface Simulation {
-    id: string;
+    id:string;
     type: 'stock_market' | 'business_management';
     title: string;
     description: string;
@@ -261,4 +261,65 @@ export interface DigitalCredential {
     issuer: string;
     verified: boolean;
     icon: LucideIcon;
+}
+
+
+// --- 🔐 PRODUCTION-READY AUTH & PAYMENT TYPES ---
+
+export interface User {
+    id: string;
+    name: string;
+    phone: string;
+    pin: string;
+    balance: number;
+    transactions: Transaction[];
+    bio: string;
+    connections: number;
+    trustScore: string;
+    email: string;
+    verified: boolean;
+}
+
+
+export interface RegisterData {
+    phone: string;
+    name: string;
+    pin: string;
+    nationalId: string;
+    enableBiometric?: boolean;
+}
+
+export interface AuthResponse {
+    success: boolean;
+    user?: User;
+    // In a real app, these would be JWTs
+    tokens?: { accessToken: string; refreshToken: string }; 
+}
+
+export interface PaymentRequest {
+    amount: number;
+    recipient: string; // Could be phone, account number, email etc.
+    description: string;
+    providerData: Record<string, string>; // e.g., { phone: '078...' }
+}
+
+export interface PaymentResponse {
+    success: boolean;
+    transactionId: string;
+    amount: number;
+    fee: number;
+    status: 'SUCCESSFUL' | 'PENDING' | 'FAILED';
+    message?: string;
+}
+
+export interface BankAccount {
+    accountNumber: string;
+    accountName: string;
+    bank: string;
+}
+
+export interface BankTransfer {
+    fromAccountId: string;
+    toBankAccount: BankAccount;
+    amount: number;
 }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 interface KycScreenProps {
-    onCompleted: (name: string) => void;
+    onCompleted: (name: string, nationalId: string) => void;
 }
 
 const KycScreen: React.FC<KycScreenProps> = ({ onCompleted }) => {
@@ -20,7 +20,7 @@ const KycScreen: React.FC<KycScreenProps> = ({ onCompleted }) => {
             return;
         }
         setError('');
-        onCompleted(name);
+        onCompleted(name, nationalId);
     };
 
     return (

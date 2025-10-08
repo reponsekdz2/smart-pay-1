@@ -17,6 +17,9 @@ import type {
     WealthRPGCharacter,
     MilestoneNFT,
     DigitalCredential,
+    User,
+    RegisterData,
+    PaymentRequest,
 } from '../types';
 import { mockCryptoWallets, mockNfts } from '../constants/cryptoData';
 import { mockBadges, mockGoals, mockQuests, mockRpgCharacter, mockMilestoneNfts } from '../constants/gamificationData';
@@ -27,19 +30,11 @@ import { mockCourses } from '../constants/educationData';
 import { mockImpactFunds, mockSdgMetrics } from '../constants/impactData';
 import { mockDigitalCredentials } from '../constants/civicData';
 
+// Import the new mock services
+import { authService } from '../services/authService';
+import { paymentGateway } from '../services/paymentService';
+import { securityService } from '../services/securityService';
 
-interface User {
-    name: string;
-    phone: string;
-    pin: string;
-    balance: number;
-    transactions: Transaction[];
-    bio: string;
-    connections: number;
-    trustScore: string;
-    email: string;
-    verified: boolean;
-}
 
 // --- NEW STATE SLICES FOR SUPER APP ---
 interface AppState {
@@ -65,58 +60,17 @@ interface AppState {
 
 interface UserStore extends AppState {
     isAuthenticated: boolean;
-    user: User;
-    setPhone: (phone: string) => void;
-    setName: (name: string) => void;
-    setPin: (pin: string) => void;
-    completeOnboarding: () => void;
-    addTransaction: (details: { recipient: string; amount: number }) => void;
-    topUpBalance: (amount: number, providerName: string) => void;
+    user: User | null; // User can be null when not authenticated
+    // --- PRODUCTION-READY ACTIONS ---
+    register: (data: RegisterData) => Promise<void>;
+    login: (phone: string, pin: string) => Promise<void>;
+    logout: () => void;
+    processTransaction: (request: PaymentRequest) => Promise<PaymentResponse>;
+    processTopUp: (request: PaymentRequest) => Promise<PaymentResponse>;
+    // --- EXISTING ACTIONS ---
     toggleMerchantView: () => void;
     setTheme: (theme: 'light' | 'dark' | 'system') => void;
-    logout: () => void;
 }
-
-const initialUser: User = {
-    name: '',
-    phone: '',
-    pin: '',
-    balance: 500000,
-    transactions: [
-        {
-            id: '1',
-            type: 'received',
-            name: 'From Mum',
-            description: 'Pocket money',
-            amount: 25000,
-            date: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-            iconName: 'arrow-down-left',
-        },
-        {
-            id: '2',
-            type: 'payment',
-            name: 'MTN Airtime',
-            description: 'Mobile top-up',
-            amount: -5000,
-            date: new Date(Date.now() - 2 * 86400000).toISOString(), // 2 days ago
-            iconName: 'power',
-        },
-        {
-            id: '3',
-            type: 'payment',
-            name: 'Supermarket',
-            description: 'Groceries',
-            amount: -15750,
-            date: new Date(Date.now() - 3 * 86400000).toISOString(), // 3 days ago
-            iconName: 'shopping-cart',
-        },
-    ],
-    bio: 'Digital finance enthusiast | Making payments simpler in Rwanda.',
-    connections: 42,
-    trustScore: '92%',
-    email: 'user@smartpay.rw',
-    verified: true,
-};
 
 const initialAppState: AppState = {
     cryptoWallets: mockCryptoWallets,
@@ -139,64 +93,102 @@ const initialAppState: AppState = {
     digitalCredentials: mockDigitalCredentials,
 };
 
-const storeName = 'user-storage-v4-quantum'; // Version bump for new structure
+const storeName = 'user-storage-v5-production'; // Version bump for new structure
 
 export const useUserStore = create<UserStore>()(
     persist(
-        (set) => ({
+        (set, get) => ({
             ...initialAppState,
             isAuthenticated: false,
-            user: initialUser,
-            setPhone: (phone) => set((state) => ({ user: { ...state.user, phone, email: `user${phone.slice(-4)}@smartpay.rw` } })),
-            setName: (name) => set((state) => ({ user: { ...state.user, name } })),
-            setPin: (pin) => set((state) => ({ user: { ...state.user, pin } })),
-            completeOnboarding: () => set({ isAuthenticated: true }),
-            addTransaction: ({ recipient, amount }) => {
-                const newTransaction: Transaction = {
-                    id: new Date().toISOString(),
-                    type: 'sent',
-                    name: `To ${recipient}`,
-                    description: 'Money Transfer',
-                    amount: -amount,
-                    date: new Date().toISOString(),
-                    iconName: 'arrow-up-right',
-                };
-                set((state) => ({
-                    user: {
-                        ...state.user,
-                        balance: state.user.balance - amount,
-                        transactions: [newTransaction, ...state.user.transactions],
-                    },
-                }));
+            user: null,
+            
+            register: async (data) => {
+                const response = await authService.register(data);
+                if (response.success && response.user) {
+                    set({ isAuthenticated: true, user: response.user });
+                } else {
+                    throw new Error('Registration failed');
+                }
             },
-            topUpBalance: (amount, providerName) => {
-              const newTransaction: Transaction = {
-                id: new Date().toISOString(),
-                type: 'top-up',
-                name: `Top-up via ${providerName}`,
-                description: 'Added funds to wallet',
-                amount: amount,
-                date: new Date().toISOString(),
-                iconName: 'arrow-down-left',
-              };
-              set((state) => ({
-                user: {
-                  ...state.user,
-                  balance: state.user.balance + amount,
-                  transactions: [newTransaction, ...state.user.transactions],
-                },
-              }));
+
+            login: async (phone, pin) => {
+                const response = await authService.login(phone, pin);
+                 if (response.success && response.user) {
+                    set({ isAuthenticated: true, user: response.user });
+                } else {
+                    throw new Error('Login failed');
+                }
             },
+
+            logout: () => set({ isAuthenticated: false, user: null, ...initialAppState }),
+
+            processTransaction: async (request) => {
+                const user = get().user;
+                if (!user || user.balance < request.amount) {
+                    throw new Error('Insufficient balance.');
+                }
+
+                const paymentAuthSuccess = await authService.processPaymentAuth(request.amount, 'TRANSFER');
+                if (!paymentAuthSuccess) {
+                    throw new Error('Payment authentication failed.');
+                }
+
+                // Use the generic 'MTN' provider for simulation
+                const response = await paymentGateway.processPayment('MTN', request);
+                
+                if (response.success) {
+                    const newTransaction: Transaction = {
+                        id: response.transactionId,
+                        type: 'sent',
+                        name: `To ${request.recipient}`,
+                        description: request.description,
+                        amount: -request.amount,
+                        date: new Date().toISOString(),
+                        iconName: 'arrow-up-right',
+                    };
+                    set(state => ({
+                        user: state.user ? {
+                            ...state.user,
+                            balance: state.user.balance - request.amount,
+                            transactions: [newTransaction, ...state.user.transactions],
+                        } : null
+                    }));
+                }
+                return response;
+            },
+            
+            processTopUp: async (request) => {
+                // Determine provider from providerData, default to MTN for simulation
+                const providerId = request.providerData.providerId || 'MTN'; 
+                const response = await paymentGateway.processPayment(providerId, request);
+
+                if (response.success) {
+                    const newTransaction: Transaction = {
+                        id: response.transactionId,
+                        type: 'top-up',
+                        name: `Top-up via ${providerId}`,
+                        description: request.description,
+                        amount: request.amount,
+                        date: new Date().toISOString(),
+                        iconName: 'arrow-down-left',
+                    };
+                     set(state => ({
+                        user: state.user ? {
+                            ...state.user,
+                            balance: state.user.balance + request.amount,
+                            transactions: [newTransaction, ...state.user.transactions],
+                        } : null
+                    }));
+                }
+                return response;
+            },
+
             toggleMerchantView: () => set((state) => ({ isMerchantView: !state.isMerchantView })),
             setTheme: (theme) => set({ theme }),
-            logout: () => set({ isAuthenticated: false, user: initialUser, ...initialAppState }),
         }),
         {
             name: storeName,
             storage: createJSONStorage(() => localStorage),
-            partialize: (state) => ({
-                ...state, // Persist everything for the super app
-            }),
         }
     )
 );

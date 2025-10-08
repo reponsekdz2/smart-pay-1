@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
-import { ArrowLeft, CheckCircle, Fingerprint } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Fingerprint, Loader2 } from 'lucide-react';
 import { useUserStore } from '../hooks/useUserStore';
 
-type Step = 'details' | 'confirm' | 'success';
+type Step = 'details' | 'confirm' | 'processing' | 'success';
 
 const SendMoneyScreen: React.FC = () => {
     const navigate = useNavigate();
@@ -14,16 +14,13 @@ const SendMoneyScreen: React.FC = () => {
     const [amount, setAmount] = useState('');
     const [pin, setPin] = useState('');
     const [error, setError] = useState('');
-    const { user, addTransaction } = useUserStore();
+    const [isLoading, setIsLoading] = useState(false);
+    
+    const { user, processTransaction } = useUserStore();
 
-    // Pre-fill from QR scan
     useEffect(() => {
-        if (location.state?.recipient) {
-            setRecipient(location.state.recipient);
-        }
-        if (location.state?.amount) {
-            setAmount(location.state.amount.toString());
-        }
+        if (location.state?.recipient) setRecipient(location.state.recipient);
+        if (location.state?.amount) setAmount(location.state.amount.toString());
     }, [location.state]);
 
 
@@ -34,7 +31,7 @@ const SendMoneyScreen: React.FC = () => {
             setError('Please enter a valid recipient and amount.');
             return;
         }
-        if (numericAmount > user.balance) {
+        if (!user || numericAmount > user.balance) {
             setError('Insufficient balance.');
             return;
         }
@@ -42,29 +39,42 @@ const SendMoneyScreen: React.FC = () => {
         setStep('confirm');
     };
     
-    const handleConfirm = () => {
-        addTransaction({ recipient, amount: parseFloat(amount) });
-        setStep('success');
-        setTimeout(() => navigate('/dashboard', { replace: true }), 2000);
+    const handlePayment = async () => {
+        setIsLoading(true);
+        setError('');
+        setStep('processing');
+        try {
+            const request = {
+                amount: parseFloat(amount),
+                recipient: recipient,
+                description: `Transfer to ${recipient}`,
+                providerData: { phone: recipient } // Assuming recipient is a phone number for MoMo
+            };
+            await processTransaction(request);
+            setStep('success');
+            setTimeout(() => navigate('/dashboard', { replace: true }), 2000);
+        } catch (e: any) {
+            setError(e.message || 'An unexpected error occurred.');
+            setStep('confirm'); // Go back to confirm step on error
+        } finally {
+            setIsLoading(false);
+        }
     };
-
+    
     const handlePinSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (pin !== user.pin) {
+        // In a real app, the PIN would be part of the auth service call
+        // Here we simulate checking it conceptually before proceeding.
+        if (pin !== user?.pin) {
             setError('Incorrect PIN. Please try again.');
             return;
         }
-        setError('');
-        handleConfirm();
+        handlePayment();
     };
     
-    const handleBiometricSubmit = () => {
-        // Simulate successful biometric scan
-        setError('');
-        // Here you would integrate with a native biometric API
-        // For now, we simulate success
-        handleConfirm();
-    };
+    // Simulate biometric auth and then proceed
+    const handleBiometricSubmit = () => handlePayment();
+
 
     const renderDetailsStep = () => (
         <form onSubmit={handleDetailsSubmit} className="p-4 space-y-6 bg-surface flex-1">
@@ -110,7 +120,7 @@ const SendMoneyScreen: React.FC = () => {
             
             <div className="mt-8">
                 <form onSubmit={handlePinSubmit}>
-                    <label htmlFor="pin" className="block text-sm font-medium text-gray-700">Enter your 6-digit PIN</label>
+                    <label htmlFor="pin" className="block text-sm font-medium text-gray-700">Enter your 6-digit PIN to confirm</label>
                     <input
                         type="password"
                         id="pin"
@@ -135,9 +145,19 @@ const SendMoneyScreen: React.FC = () => {
                     className="w-full flex items-center justify-center bg-gray-100 text-textPrimary font-bold py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors"
                 >
                     <Fingerprint className="w-6 h-6 mr-2 text-primary" />
-                    Use Biometrics
+                    Authenticate with Biometrics
                 </button>
             </div>
+        </div>
+    );
+    
+    const renderProcessingStep = () => (
+         <div className="flex flex-col items-center justify-center h-full text-center p-4 bg-surface">
+            <Loader2 className="w-24 h-24 text-primary animate-spin" />
+            <h2 className="mt-6 text-2xl font-bold text-textPrimary">Processing Transaction...</h2>
+            <p className="text-lg text-textSecondary mt-2">
+                Please wait while we securely process your payment.
+            </p>
         </div>
     );
 
@@ -156,7 +176,7 @@ const SendMoneyScreen: React.FC = () => {
             <Header
                 title="Send Money"
                 leftAction={
-                    step !== 'success' ? (
+                    step !== 'success' && step !== 'processing' ? (
                         <button onClick={() => step === 'details' ? navigate(-1) : setStep('details')}>
                             <ArrowLeft className="w-6 h-6" />
                         </button>
@@ -166,6 +186,7 @@ const SendMoneyScreen: React.FC = () => {
             <div className="flex-grow">
                  {step === 'details' && renderDetailsStep()}
                  {step === 'confirm' && renderConfirmStep()}
+                 {step === 'processing' && renderProcessingStep()}
                  {step === 'success' && renderSuccessStep()}
             </div>
         </div>

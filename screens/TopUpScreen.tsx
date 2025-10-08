@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
-import Card from '../components/Card';
-import { ArrowLeft, CheckCircle, Lock, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Lock, ShieldCheck, Loader2 } from 'lucide-react';
 import { useUserStore } from '../hooks/useUserStore';
-import type { PaymentProvider, ProviderCategory } from '../types';
+import type { PaymentProvider } from '../types';
 import { paymentProviders, providerCategories } from '../constants/paymentProviders';
 
 const ProviderCard: React.FC<{ provider: PaymentProvider, onSelect: () => void }> = ({ provider, onSelect }) => (
@@ -52,9 +51,10 @@ const TopUpScreen: React.FC = () => {
     const [selectedProvider, setSelectedProvider] = useState<PaymentProvider | null>(null);
     const [amount, setAmount] = useState('');
     const [formState, setFormState] = useState<Record<string, string>>({});
-    const [step, setStep] = useState<'select' | 'form' | 'success'>('select');
+    const [step, setStep] = useState<'select' | 'form' | 'processing' | 'success'>('select');
     const [error, setError] = useState('');
-    const { topUpBalance } = useUserStore();
+    const [isLoading, setIsLoading] = useState(false);
+    const { processTopUp } = useUserStore();
 
     const handleProviderSelect = (provider: PaymentProvider) => {
         setSelectedProvider(provider);
@@ -65,23 +65,38 @@ const TopUpScreen: React.FC = () => {
         setFormState(prev => ({ ...prev, [id]: value }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const numericAmount = parseFloat(amount);
         if (isNaN(numericAmount) || numericAmount <= 0) {
             setError('Please enter a valid amount.');
             return;
         }
-        // Basic validation for form fields
         if (selectedProvider?.formFields.some(field => !formState[field.id])) {
             setError('Please fill in all required fields.');
             return;
         }
-
+        
+        setIsLoading(true);
         setError('');
-        topUpBalance(numericAmount, selectedProvider!.name);
-        setStep('success');
-        setTimeout(() => navigate('/dashboard'), 2000);
+        setStep('processing');
+
+        try {
+            const request = {
+                amount: numericAmount,
+                recipient: 'self', // Topping up own wallet
+                description: `Top-up via ${selectedProvider!.name}`,
+                providerData: { ...formState, providerId: selectedProvider!.id }
+            };
+            await processTopUp(request);
+            setStep('success');
+            setTimeout(() => navigate('/dashboard'), 2000);
+        } catch (e: any) {
+            setError(e.message || 'An unexpected error occurred.');
+            setStep('form');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const resetFlow = () => {
@@ -129,6 +144,16 @@ const TopUpScreen: React.FC = () => {
             </form>
         );
     };
+
+    const renderProcessingStep = () => (
+         <div className="flex flex-col items-center justify-center h-full text-center p-4 bg-surface">
+            <Loader2 className="w-24 h-24 text-primary animate-spin" />
+            <h2 className="mt-6 text-2xl font-bold text-textPrimary">Processing Top-Up...</h2>
+            <p className="text-lg text-textSecondary mt-2">
+                Please wait while we securely process your payment.
+            </p>
+        </div>
+    );
     
      const renderSuccessStep = () => (
         <div className="flex flex-col items-center justify-center h-full text-center p-4 bg-surface">
@@ -145,14 +170,17 @@ const TopUpScreen: React.FC = () => {
             <Header
                 title={step === 'select' ? 'Top Up Wallet' : `Via ${selectedProvider?.name}`}
                 leftAction={
-                    <button onClick={() => step === 'form' ? resetFlow() : navigate(-1)}>
-                        <ArrowLeft className="w-6 h-6" />
-                    </button>
+                    step !== 'processing' && step !== 'success' ? (
+                        <button onClick={() => step === 'form' ? resetFlow() : navigate(-1)}>
+                            <ArrowLeft className="w-6 h-6" />
+                        </button>
+                    ) : null
                 }
             />
             <div className="flex-grow">
                 {step === 'select' && <PaymentProviderSelector onSelectProvider={handleProviderSelect} />}
                 {step === 'form' && renderForm()}
+                {step === 'processing' && renderProcessingStep()}
                 {step === 'success' && renderSuccessStep()}
             </div>
         </div>

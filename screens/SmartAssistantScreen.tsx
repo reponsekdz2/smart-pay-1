@@ -4,12 +4,19 @@ import { GoogleGenAI } from '@google/genai';
 import { useUserStore } from '../hooks/useUserStore';
 import type { ChatMessage } from '../types';
 
-const API_KEY = process.env.API_KEY;
-if (!API_KEY) {
-  // This is a fallback for development; in production, the key should be set.
-  console.warn("API_KEY is not set. AI Assistant will not work.");
+// Initialize AI client lazily and safely
+let ai: GoogleGenAI | null = null;
+try {
+    const API_KEY = process.env.API_KEY;
+    if (API_KEY) {
+        ai = new GoogleGenAI({ apiKey: API_KEY });
+    } else {
+        console.warn("API_KEY is not set. AI Assistant will not work.");
+    }
+} catch (error) {
+    console.error("Failed to initialize GoogleGenAI:", error);
+    ai = null; // Ensure ai is null if initialization fails
 }
-const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 
 interface SmartAssistantScreenProps {
@@ -34,7 +41,14 @@ const SmartAssistantScreen: React.FC<SmartAssistantScreenProps> = ({ onClose }) 
     }, [messages]);
 
     const handleSend = async () => {
-        if (!input.trim() || isLoading || !API_KEY) return;
+        if (!input.trim() || isLoading) return;
+
+        if (!ai) {
+             const errorMessage: ChatMessage = { role: 'model', text: "Sorry, the AI assistant is not configured correctly. Please try again later." };
+             setMessages(prev => [...prev, { role: 'user', text: input }, errorMessage]);
+             setInput('');
+             return;
+        }
 
         const userMessage: ChatMessage = { role: 'user', text: input };
         setMessages(prev => [...prev, userMessage]);
@@ -107,11 +121,11 @@ const SmartAssistantScreen: React.FC<SmartAssistantScreenProps> = ({ onClose }) 
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                            placeholder={API_KEY ? "Ask me anything..." : "API Key not configured"}
+                            placeholder={ai ? "Ask me anything..." : "AI Assistant not available"}
                             className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full focus:outline-none focus:ring-2 focus:ring-primary bg-transparent dark:text-white"
-                            disabled={isLoading || !API_KEY}
+                            disabled={isLoading || !ai}
                         />
-                        <button onClick={handleSend} disabled={isLoading || !input.trim() || !API_KEY} className="bg-primary text-white p-3 rounded-full hover:bg-primaryDark disabled:bg-gray-400">
+                        <button onClick={handleSend} disabled={isLoading || !input.trim() || !ai} className="bg-primary text-white p-3 rounded-full hover:bg-primaryDark disabled:bg-gray-400">
                             <Send className="w-5 h-5" />
                         </button>
                     </div>

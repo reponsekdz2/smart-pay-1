@@ -36,6 +36,14 @@ const ProfileScreen: React.FC = () => {
     const { user, logout, isMerchantView, toggleMerchantView } = useUserStore();
     const navigate = useNavigate();
 
+    if (!user) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <p>Loading profile...</p>
+            </div>
+        );
+    }
+
     return (
         <div className="bg-background dark:bg-gray-900 min-h-full pb-6">
             <div className="bg-surface dark:bg-gray-800">
