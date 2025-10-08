@@ -17,16 +17,15 @@ import TopUpScreen from './screens/TopUpScreen'; // Import the new screen
 
 // Custom hook to reliably track Zustand hydration status using the official persist API
 const useHydration = () => {
-    // Start with `hydrated` as `false` to avoid a race condition where the app
-    // renders before the store is fully rehydrated.
     const [hydrated, setHydrated] = useState(false);
 
     useEffect(() => {
+        // `onFinishHydration` returns a function to unsubscribe
         const unsub = useUserStore.persist.onFinishHydration(() => {
             setHydrated(true);
         });
 
-        // Fallback for cases where hydration finishes before the component mounts
+        // Check if hydration is already complete
         if (useUserStore.persist.hasHydrated()) {
             setHydrated(true);
         }
