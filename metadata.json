@@ -1,0 +1,7 @@
+{
+  "name": "SMART PAY RWANDA PRO",
+  "description": "A premium financial super-app prototype with integrated insurance services, designed for the Rwandan market. It features comprehensive payment, insurance, and investment modules with a focus on a seamless and secure user experience.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
