@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import Card from '../components/Card';
 import Header from '../components/Header';
-import { apiGateway } from '../services/apiGateway';
-import type { BusinessIntelligence } from '../types';
+// FIX: Add .ts extension to file paths
+import { apiGateway } from '../services/apiGateway.ts';
+import type { BusinessIntelligence } from '../types.ts';
 import { BarChart, Users, DollarSign, AlertTriangle } from 'lucide-react';
 
 const MetricCard: React.FC<{ icon: React.ElementType; title: string; value: string | number; }> = ({ icon: Icon, title, value }) => (

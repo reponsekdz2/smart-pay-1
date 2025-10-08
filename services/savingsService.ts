@@ -1,7 +1,6 @@
-
-import type { ApiResponse, User, SavingsGoal } from '../types';
-import { MOCK_USER_DB_TYPE } from './db';
-import { decodeToken } from './authService';
+import type { ApiResponse, User, SavingsGoal } from '../types.ts';
+import { MOCK_USER_DB_TYPE } from './db.ts';
+import { decodeToken } from './authService.ts';
 
 /**
  * @class SavingsService
@@ -14,7 +13,7 @@ export class SavingsService {
     constructor(db: MOCK_USER_DB_TYPE) {
         this.db = db;
     }
-
+    
     setAuthToken(token: string | null) {
         this.authToken = token;
     }
@@ -30,28 +29,11 @@ export class SavingsService {
     async getGoalsByUserId(userId: string): Promise<ApiResponse<SavingsGoal[]>> {
         const user = this.getAuthenticatedUser();
         if (user.id !== userId) throw new Error("Forbidden");
-
-        await new Promise(resolve => setTimeout(resolve, 300)); // Simulate DB query
-
+        
+        console.log(`SAVINGS_SERVICE: Fetching goals for user ${userId}`);
+        await new Promise(resolve => setTimeout(resolve, 350));
+        
         const goals = this.db.savingsGoals.filter(g => g.userId === userId);
         return { success: true, data: goals };
-    }
-
-    async createGoal(userId: string, goal: Omit<SavingsGoal, 'id' | 'userId' | 'createdAt' | 'currentAmount'>): Promise<ApiResponse<SavingsGoal>> {
-        const user = this.getAuthenticatedUser();
-        if (user.id !== userId) throw new Error("Forbidden");
-        
-        const newGoal: SavingsGoal = {
-            ...goal,
-            id: `sg_${Date.now()}`,
-            userId,
-            currentAmount: 0,
-            createdAt: new Date().toISOString(),
-        };
-
-        this.db.savingsGoals.push(newGoal);
-        console.log(`SAVINGS_SERVICE: Created new goal "${newGoal.name}" for user ${userId}`);
-        
-        return { success: true, data: newGoal };
     }
 }

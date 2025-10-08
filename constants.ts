@@ -1,3 +1,3 @@
-
-// This file can be used for application-wide constants.
-// For now, it is empty. Specific constants are in their own files (e.g., constants/config.ts).
+export const APP_NAME = 'Smart Pay Rwanda PRO';
+export const APP_VERSION = '1.0.0';
+export const CURRENCY = 'RWF';

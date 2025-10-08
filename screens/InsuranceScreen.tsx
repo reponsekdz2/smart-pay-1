@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import Card from '../components/Card';
-import { apiGateway } from '../services/apiGateway';
-import { useUserStore } from '../hooks/useUserStore';
-import type { InsurancePolicy } from '../types';
+// FIX: Add .ts extension to file paths
+import { apiGateway } from '../services/apiGateway.ts';
+import { useUserStore } from '../hooks/useUserStore.ts';
+import type { InsurancePolicy } from '../types.ts';
 import { ShieldCheck, HeartPulse, Car, Home as HomeIcon } from 'lucide-react';
 
 const PolicyCard: React.FC<{ policy: InsurancePolicy }> = ({ policy }) => {

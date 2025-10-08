@@ -1,68 +1,58 @@
-
-import type { ApiResponse, Wallet } from '../types';
-import { MOCK_USER_DB_TYPE } from './db';
-import { CacheService } from './cacheService';
+import type { ApiResponse, User, Wallet, Transaction } from '../types.ts';
+import { MOCK_USER_DB_TYPE } from './db.ts';
+import { decodeToken } from './authService.ts';
 
 /**
  * @class WalletService
- * Simulates the backend wallet microservice.
+ * Simulates the backend microservice for managing wallets and transactions.
  */
 export class WalletService {
     private db: MOCK_USER_DB_TYPE;
-    private cache: CacheService;
+    private authToken: string | null = null;
 
-    constructor(db: MOCK_USER_DB_TYPE, cache: CacheService) {
+    constructor(db: MOCK_USER_DB_TYPE) {
         this.db = db;
-        this.cache = cache;
-    }
-
-    async createWallet(userId: string, currency: 'RWF'): Promise<Wallet> {
-        console.log(`WALLET_SERVICE: Creating wallet for user ${userId}`);
-        const existingWallet = this.db.wallets.find(w => w.userId === userId && w.currency === currency);
-        if (existingWallet) {
-            throw new Error('Wallet already exists for this user.');
-        }
-
-        const newWallet: Wallet = {
-            id: `wallet_${Date.now()}`,
-            userId,
-            balance: 0,
-            availableBalance: 0,
-            currency,
-            createdAt: new Date().toISOString(),
-        };
-        this.db.wallets.push(newWallet);
-        await this.cache.set(`wallet:user:${userId}`, newWallet, 3600);
-        return newWallet;
     }
     
-    async getWalletByUserId(userId: string): Promise<ApiResponse<Wallet | null>> {
-        const wallet = await this.cache.getOrSet<Wallet | undefined>(`wallet:user:${userId}`, async () => {
-             return this.db.wallets.find(w => w.userId === userId);
-        }, 300);
+    setAuthToken(token: string | null) {
+        this.authToken = token;
+    }
 
-        if (!wallet) {
-            return { success: false, data: null, error: 'Wallet not found' };
-        }
+    private getAuthenticatedUser(): User {
+        if (!this.authToken) throw new Error("Unauthorized");
+        const payload = decodeToken(this.authToken);
+        const user = this.db.users.find(u => u.id === payload.sub);
+        if (!user) throw new Error("User not found");
+        return user;
+    }
+
+    async getWalletByUserId(userId: string): Promise<ApiResponse<Wallet>> {
+        const user = this.getAuthenticatedUser();
+        if (user.id !== userId) throw new Error("Forbidden");
+        
+        console.log(`WALLET_SERVICE: Fetching wallet for user ${userId}`);
+        await new Promise(resolve => setTimeout(resolve, 150));
+
+        const wallet = this.db.wallets.find(w => w.userId === userId);
+        if (!wallet) return { success: false, error: "Wallet not found" };
         return { success: true, data: wallet };
     }
 
-    // Internal method for services, not exposed via API Gateway
-    _updateBalance(walletId: string, amount: number): boolean {
-        const wallet = this.db.wallets.find(w => w.id === walletId);
-        if (wallet) {
-            if (wallet.availableBalance + amount < 0) {
-                console.error(`WALLET_SERVICE: Insufficient funds for wallet ${walletId}`);
-                return false;
-            }
-            wallet.balance += amount;
-            wallet.availableBalance += amount;
-            // Invalidate cache
-            this.cache.del(`wallet:user:${wallet.userId}`);
-            console.log(`WALLET_SERVICE: Updated balance for wallet ${walletId}. New balance: ${wallet.balance}`);
-            return true;
-        }
-        console.error(`WALLET_SERVICE: Wallet not found: ${walletId}`);
-        return false;
+    async getTransactionsByUserId(userId: string, limit: number = 20): Promise<ApiResponse<Transaction[]>> {
+        const user = this.getAuthenticatedUser();
+        if (user.id !== userId) throw new Error("Forbidden");
+
+        const wallet = this.db.wallets.find(w => w.userId === userId);
+        if (!wallet) return { success: false, error: "Wallet not found" };
+
+        console.log(`WALLET_SERVICE: Fetching transactions for user ${userId}`);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        const transactions = this.db.transactions
+            .filter(t => t.fromWalletId === wallet.id || t.toWalletId === wallet.id)
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .slice(0, limit);
+            
+        return { success: true, data: transactions };
     }
 }

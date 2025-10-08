@@ -1,8 +1,8 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
-import { useUserStore } from '../hooks/useUserStore';
+// FIX: Add .ts extension to file path
+import { useUserStore } from '../hooks/useUserStore.ts';
 import { ArrowLeft, User, Mail, Phone, Edit } from 'lucide-react';
 import Card from '../components/Card';
 

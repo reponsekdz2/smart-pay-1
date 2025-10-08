@@ -1,5 +1,2 @@
-const Config = {
-    DAILY_SEND_LIMIT: 1000000, // e.g., 1 Million RWF
-};
-
-export default Config;
+export const API_BASE_URL = '/api'; // Using a relative path for mock setup
+export const MOCK_API_DELAY = 500; // ms

@@ -1,4 +1,5 @@
-import type { NotificationPayload } from '../types';
+// FIX: Add .ts extension to file path
+import type { NotificationPayload } from '../types.ts';
 
 /**
  * @class NotificationService

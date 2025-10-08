@@ -1,5 +1,6 @@
-import type { ApiResponse, FinancialInsights, BusinessIntelligence, User } from '../types';
-import { MOCK_USER_DB_TYPE } from './db';
+// FIX: Add .ts extension to file paths
+import type { ApiResponse, FinancialInsights } from '../types.ts';
+import { MOCK_USER_DB_TYPE } from './db.ts';
 
 /**
  * @class AnalyticsService

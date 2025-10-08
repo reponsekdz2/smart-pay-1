@@ -1,7 +1,7 @@
-
-import type { ApiResponse, User, InsurancePolicy } from '../types';
-import { MOCK_USER_DB_TYPE } from './db';
-import { decodeToken } from './authService';
+// FIX: Add .ts extension to file paths
+import type { ApiResponse, User, InsurancePolicy } from '../types.ts';
+import { MOCK_USER_DB_TYPE } from './db.ts';
+import { decodeToken } from './authService.ts';
 
 /**
  * @class InsuranceService

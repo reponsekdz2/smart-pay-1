@@ -1,6 +1,6 @@
-
 import React from 'react';
-import { useUserStore } from '../hooks/useUserStore';
+// FIX: Add .ts extension to file path
+import { useUserStore } from '../hooks/useUserStore.ts';
 import { Sun, Moon, Laptop } from 'lucide-react';
 
 const ThemeSwitcher: React.FC = () => {

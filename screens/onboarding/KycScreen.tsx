@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { useUserStore } from '../../hooks/useUserStore';
-import type { RegisterDto } from '../../types';
+// FIX: Add .ts extension to file paths
+import { useUserStore } from '../../hooks/useUserStore.ts';
+import type { RegisterDto } from '../../types.ts';
 
 interface KycScreenProps {
     regData: Partial<RegisterDto>;

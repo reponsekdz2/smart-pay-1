@@ -1,13 +1,13 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useUserStore } from '../hooks/useUserStore';
-import { apiGateway } from '../services/apiGateway';
-import type { FinancialInsights } from '../types';
 import Card from '../components/Card';
-import { SpendingPieChart, IncomeExpenseBarChart } from '../components/charts/FinancialCharts';
+import { FinancialHealthChart } from '../components/charts/FinancialHealthChart';
+import { SpendingByCategoryChart, IncomeExpenseChart } from '../components/charts/FinancialCharts.tsx';
+import { apiGateway } from '../services/apiGateway';
+import { useUserStore } from '../hooks/useUserStore';
+import type { FinancialInsights } from '../types';
 
 const AnalyticsScreen: React.FC = () => {
     const navigate = useNavigate();
@@ -21,7 +21,7 @@ const AnalyticsScreen: React.FC = () => {
             try {
                 const res = await apiGateway.analytics.getFinancialInsights(user.id);
                 if (res.success) {
-                    setInsights(res.data);
+                    setInsights(res.data!);
                 }
             } catch (err) {
                 console.error("Failed to fetch insights", err);
@@ -32,37 +32,40 @@ const AnalyticsScreen: React.FC = () => {
         fetchInsights();
     }, [user]);
 
+    const financialHealthScore = insights ? Math.max(0, Math.round(insights.savingsRate)) : 0;
+
     return (
-        <div className="bg-background dark:bg-gray-900 min-h-full flex flex-col">
+        <div className="bg-background dark:bg-gray-900 min-h-full">
             <Header
                 title="Financial Analytics"
                 leftAction={<button onClick={() => navigate(-1)}><ArrowLeft className="w-6 h-6" /></button>}
             />
-            <main className="p-4 space-y-6">
+            <main className="p-4 space-y-4">
                 {isLoading ? (
                     <p className="text-center text-textSecondary dark:text-gray-400">Loading insights...</p>
-                ) : insights ? (
+                ) : !insights ? (
+                     <p className="text-center text-textSecondary dark:text-gray-400">Could not load insights.</p>
+                ) : (
                     <>
                         <Card>
-                            <h2 className="text-lg font-bold text-textPrimary dark:text-white mb-2">Spending By Category</h2>
+                            <h2 className="text-lg font-bold text-textPrimary dark:text-white mb-2">Financial Health</h2>
+                            <div className="h-48">
+                                <FinancialHealthChart score={financialHealthScore} />
+                            </div>
+                        </Card>
+                         <Card>
+                            <h2 className="text-lg font-bold text-textPrimary dark:text-white mb-2">Spending by Category</h2>
                             <div className="h-64">
-                                <SpendingPieChart data={insights.spendingByCategory} />
+                                <SpendingByCategoryChart data={insights.spendingByCategory} />
                             </div>
                         </Card>
                         <Card>
                             <h2 className="text-lg font-bold text-textPrimary dark:text-white mb-2">Income vs. Expense</h2>
                              <div className="h-64">
-                                <IncomeExpenseBarChart data={insights.incomeVsExpense} />
+                                <IncomeExpenseChart data={insights.incomeVsExpense} />
                             </div>
                         </Card>
-                         <Card>
-                            <h2 className="text-lg font-bold text-textPrimary dark:text-white">Savings Rate</h2>
-                            <p className="text-3xl font-bold text-success">{insights.savingsRate.toFixed(1)}%</p>
-                            <p className="text-sm text-textSecondary dark:text-gray-400">of your income this month was saved.</p>
-                        </Card>
                     </>
-                ) : (
-                    <p className="text-center text-textSecondary dark:text-gray-400">Could not load financial insights.</p>
                 )}
             </main>
         </div>

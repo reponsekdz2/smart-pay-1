@@ -1,41 +1,41 @@
-
 import React from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, List } from 'lucide-react';
+import { NavLink, Outlet } from 'react-router-dom';
+import { LayoutDashboard, Users, BarChart2, Settings, Shield, Code } from 'lucide-react';
 
 const AdminLayout: React.FC = () => {
-    const location = useLocation();
-
     const navItems = [
-        { path: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+        { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { path: '/admin/users', label: 'Users', icon: Users },
-        { path: '/admin/transactions', label: 'Transactions', icon: List },
+        { path: '/admin/transactions', label: 'Transactions', icon: BarChart2 },
+        { path: '/admin/security', label: 'Security', icon: Shield },
+        { path: '/admin/settings', label: 'Settings', icon: Settings },
+        { path: '/admin/developer', label: 'Developer', icon: Code },
     ];
-
     return (
-        <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
-            <aside className="w-64 bg-white dark:bg-gray-800 shadow-md">
-                <div className="p-4">
-                    <h1 className="text-2xl font-bold text-primary">Admin Panel</h1>
-                </div>
-                <nav>
-                    <ul>
-                        {navItems.map(item => (
-                             <li key={item.path}>
-                                <Link 
-                                    to={item.path}
-                                    className={`flex items-center p-4 text-textPrimary dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700 ${location.pathname === item.path ? 'bg-gray-200 dark:bg-gray-700' : ''}`}
-                                >
-                                    <item.icon className="w-6 h-6 mr-3" />
-                                    {item.label}
-                                </Link>
-                            </li>
-                        ))}
-                    </ul>
+        <div className="flex h-screen bg-gray-100">
+            <aside className="w-64 bg-gray-800 text-white flex flex-col">
+                <div className="p-4 text-2xl font-bold border-b border-gray-700">Smart Pay Admin</div>
+                <nav className="flex-1 p-2 space-y-1">
+                    {navItems.map(item => (
+                        <NavLink
+                            key={item.path}
+                            to={item.path}
+                            className={({ isActive }) =>
+                                `flex items-center px-4 py-2 rounded-md space-x-3 transition-colors ${
+                                isActive ? 'bg-primary text-white' : 'hover:bg-gray-700'
+                                }`
+                            }
+                        >
+                            <item.icon className="w-5 h-5" />
+                            <span>{item.label}</span>
+                        </NavLink>
+                    ))}
                 </nav>
             </aside>
-            <main className="flex-1 p-6 overflow-y-auto">
-                <Outlet />
+            <main className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 overflow-y-auto bg-background p-4">
+                     <Outlet />
+                </div>
             </main>
         </div>
     );

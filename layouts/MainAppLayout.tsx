@@ -1,11 +1,11 @@
-
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import BottomNav from '../components/BottomNav';
 import { LayoutDashboard, BarChart2, ShieldCheck, PiggyBank, MoreHorizontal } from 'lucide-react';
-import { useUserStore } from '../hooks/useUserStore';
-import { notificationService } from '../services/notificationService';
-import type { NotificationPayload } from '../types';
+// FIX: Add .ts extension to file paths
+import { useUserStore } from '../hooks/useUserStore.ts';
+import { notificationService } from '../services/notificationService.ts';
+import type { NotificationPayload } from '../types.ts';
 
 const MainAppLayout: React.FC = () => {
     const { user } = useUserStore();

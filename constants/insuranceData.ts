@@ -1,5 +1,5 @@
-
-import type { InsurancePolicy } from '../types';
+// FIX: Add .ts extension to file path
+import type { InsurancePolicy } from '../types.ts';
 
 export const MOCK_INSURANCE_POLICIES: Omit<InsurancePolicy, 'id' | 'userId'>[] = [
     {

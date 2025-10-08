@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useUserStore } from '../../hooks/useUserStore';
+// FIX: Add .ts extension to file path
+import { useUserStore } from '../../hooks/useUserStore.ts';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 
