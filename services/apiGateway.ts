@@ -8,6 +8,7 @@ import { InsuranceService } from './insuranceService.ts';
 import { SavingsService } from './savingsService.ts';
 import { AnalyticsService } from './analyticsService.ts';
 import { AdminService } from './adminService.ts';
+import { ApiGeneratorService } from './apiGeneratorService.ts';
 
 // Instantiate services
 const complianceService = new ComplianceService();
@@ -18,6 +19,7 @@ const insuranceService = new InsuranceService(MOCK_DB);
 const savingsService = new SavingsService(MOCK_DB);
 const analyticsService = new AnalyticsService(MOCK_DB);
 const adminService = new AdminService(MOCK_DB);
+const apiGeneratorService = new ApiGeneratorService(MOCK_DB);
 
 // The Gateway itself
 export const apiGateway = {
@@ -44,6 +46,11 @@ export const apiGateway = {
     },
     admin: {
         getBusinessIntelligence: adminService.getBusinessIntelligence.bind(adminService),
+    },
+    apiGenerator: {
+        generateApiKey: apiGeneratorService.generateApiKey.bind(apiGeneratorService),
+        getApiKeys: apiGeneratorService.getApiKeys.bind(apiGeneratorService),
+        getApiEndpoints: apiGeneratorService.getApiEndpoints.bind(apiGeneratorService),
     },
     
     // This function allows the auth token to be passed down to all services that need it.

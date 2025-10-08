@@ -1,5 +1,5 @@
 
-import type { User, Wallet, Transaction, InsurancePolicy, SavingsGoal } from '../types.ts';
+import type { User, Wallet, Transaction, InsurancePolicy, SavingsGoal, ApiKey } from '../types.ts';
 import { MOCK_INSURANCE_POLICIES } from '../constants/insuranceData.ts';
 
 // Mock data
@@ -32,12 +32,15 @@ const MOCK_INSURANCE_POLICIES_WITH_ID: InsurancePolicy[] = MOCK_INSURANCE_POLICI
     userId: 'user-1'
 }));
 
+const MOCK_API_KEYS: ApiKey[] = [];
+
 export const MOCK_DB = {
     users: MOCK_USERS,
     wallets: MOCK_WALLETS,
     transactions: MOCK_TRANSACTIONS,
     savingsGoals: MOCK_SAVINGS_GOALS,
     insurancePolicies: MOCK_INSURANCE_POLICIES_WITH_ID,
+    apiKeys: MOCK_API_KEYS,
 };
 
 export type MOCK_USER_DB_TYPE = typeof MOCK_DB;

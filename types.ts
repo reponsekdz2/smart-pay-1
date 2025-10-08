@@ -55,7 +55,6 @@ export interface SavingsGoal {
   createdAt: string;
 }
 
-
 // --- API & Service Payloads ---
 
 export interface ApiResponse<T = any> {
@@ -97,6 +96,38 @@ export interface ComplianceCheck {
     riskScore: number;
     requiresManualReview: boolean;
 }
+
+// --- Developer & API Management ---
+
+export type ApiPermission = 'transactions:create' | 'transactions:read' | 'users:read' | 'wallets:read';
+
+export interface ApiKey {
+  id: string;
+  merchantName: string;
+  apiKey: string;
+  apiSecretHash: string; // Only the hash is stored
+  permissions: ApiPermission[];
+  createdAt: string;
+  status: 'active' | 'revoked';
+}
+
+export interface GenerateApiKeyDto {
+    merchantName: string;
+    permissions: ApiPermission[];
+}
+
+// This is the response from the service, including the secret for one-time display
+export interface GeneratedApiKey extends ApiKey {
+    apiSecret: string; // The raw secret, shown only once
+}
+
+export interface ApiEndpoint {
+    method: 'GET' | 'POST';
+    path: string;
+    description: string;
+    permissions: ApiPermission[];
+}
+
 
 // --- Analytics & BI ---
 
