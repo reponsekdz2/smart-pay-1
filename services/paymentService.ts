@@ -1,99 +1,103 @@
-import Config from '../constants/config';
-import type { PaymentRequest, PaymentResponse } from '../types';
+import type { ApiResponse, PaymentDto, Transaction, User, PaymentRoute } from '../types';
+import { MOCK_USER_DB_TYPE } from './db';
+import { WalletService } from './walletService';
+import { decodeToken } from './authService';
 
-// This is a mock implementation of an MTN Mobile Money service.
-class MTNMobileMoneyService {
-  private apiKey: string;
-  private baseURL: string;
-  private subscriptionKey: string;
+/**
+ * @class PaymentService
+ * Simulates the backend payment microservice.
+ */
+export class PaymentService {
+    private db: MOCK_USER_DB_TYPE;
+    private walletService: WalletService;
+    private authToken: string | null = null;
 
-  constructor() {
-    this.apiKey = Config.MTN_API_KEY;
-    this.baseURL = Config.MTN_BASE_URL;
-    this.subscriptionKey = Config.MTN_SUBSCRIPTION_KEY;
-  }
+    constructor(db: MOCK_USER_DB_TYPE, walletService: WalletService) {
+        this.db = db;
+        this.walletService = walletService;
+    }
 
-  // Simulates polling for the transaction status from the MTN API.
-  private async pollTransactionStatus(referenceId: string): Promise<'SUCCESSFUL' | 'FAILED'> {
-    console.log(`Polling status for transaction: ${referenceId}`);
-    await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate network delay
-    // Randomly succeed or fail for demonstration purposes.
-    const isSuccess = Math.random() > 0.1; // 90% success rate
-    console.log(`Transaction ${referenceId} status: ${isSuccess ? 'SUCCESSFUL' : 'FAILED'}`);
-    return isSuccess ? 'SUCCESSFUL' : 'FAILED';
-  }
+    setAuthToken(token: string | null) {
+        this.authToken = token;
+    }
 
-  public async initiatePayment(paymentRequest: PaymentRequest): Promise<PaymentResponse> {
-    console.log(`Initiating MTN payment to ${paymentRequest.recipient} for ${paymentRequest.amount} RWF`);
+    private getAuthenticatedUser(): User {
+        if (!this.authToken) throw new Error("Unauthorized");
+        const payload = decodeToken(this.authToken);
+        const user = this.db.users.find(u => u.id === payload.sub);
+        if (!user) throw new Error("User not found");
+        return user;
+    }
+
+    private async detectFraud(dto: PaymentDto): Promise<boolean> {
+        console.log(`PAYMENT_SERVICE: Running fraud detection for ${dto.amount} RWF`);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        return dto.amount > 1000000; 
+    }
     
-    // Simulate API call to MTN
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const referenceId = `mtn-tx-${Date.now()}`;
-    console.log(`MTN payment initiated. Reference ID: ${referenceId}`);
+    // Simulates smart routing to find the best payment provider
+    async findOptimalRoute(payment: { amount: number }): Promise<PaymentRoute> {
+        console.log(`PAYMENT_SERVICE: Finding optimal route for amount ${payment.amount}`);
+        await new Promise(resolve => setTimeout(resolve, 200));
 
-    const status = await this.pollTransactionStatus(referenceId);
-    
-    const fee = paymentRequest.amount * 0.005; // Simulate 0.5% fee
+        // Mock provider stats
+        const routes = [
+            { provider: 'MTN', cost: payment.amount * 0.01, speed: 10, reliability: 0.98, successRate: 0.99 },
+            { provider: 'Airtel', cost: payment.amount * 0.012, speed: 15, reliability: 0.97, successRate: 0.98 },
+            { provider: 'Bank', cost: payment.amount * 0.005 + 500, speed: 300, reliability: 0.99, successRate: 0.96 },
+        ];
 
-    if (status === 'SUCCESSFUL') {
-        return {
-            success: true,
-            transactionId: referenceId,
-            amount: paymentRequest.amount,
-            fee: fee,
-            status: 'SUCCESSFUL',
+        // Scoring algorithm (lower is better for cost/speed, higher for reliability/success)
+        const scoredRoutes = routes.map(r => {
+            const score = (1/r.cost) * 0.4 + (1/r.speed) * 0.2 + r.reliability * 0.2 + r.successRate * 0.2;
+            return { ...r, score };
+        });
+
+        const bestRoute = scoredRoutes.reduce((best, current) => current.score > best.score ? current : best);
+        return bestRoute;
+    }
+
+
+    async initiateTopUp(dto: PaymentDto): Promise<ApiResponse<Transaction>> {
+        const user = this.getAuthenticatedUser();
+        console.log(`PAYMENT_SERVICE: Initiating top-up for ${user.name} via ${dto.provider}`);
+        
+        const isFraudulent = await this.detectFraud(dto);
+        if (isFraudulent) {
+            throw new Error('Transaction flagged for manual review.');
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        console.log(`PAYMENT_SERVICE: Received success callback from ${dto.provider}`);
+
+        const userWallet = this.db.wallets.find(w => w.userId === user.id);
+        if (!userWallet) throw new Error("User wallet not found.");
+
+        userWallet.balance += dto.amount;
+        userWallet.availableBalance += dto.amount;
+
+        const transaction: Transaction = {
+            id: `txn_topup_${Date.now()}`, fromWalletId: 'EXTERNAL', toWalletId: userWallet.id,
+            amount: dto.amount, fee: dto.amount * 0.01, currency: 'RWF', status: 'COMPLETED', type: 'TOPUP',
+            provider: dto.provider, providerReference: `prov_ref_${Date.now()}`, description: `Top-up via ${dto.provider}`,
+            createdAt: new Date().toISOString(),
         };
-    } else {
-        return {
-            success: false,
-            transactionId: referenceId,
-            amount: paymentRequest.amount,
-            fee: 0,
-            status: 'FAILED',
-            message: 'The provider could not process the transaction.'
-        };
+        this.db.transactions.push(transaction);
+
+        return { success: true, data: transaction };
     }
-  }
+
+    async getTransactionsByUserId(userId: string): Promise<ApiResponse<Transaction[]>> {
+        const user = this.getAuthenticatedUser();
+        if (user.id !== userId) throw new Error("Forbidden");
+
+        const userWallet = this.db.wallets.find(w => w.userId === userId);
+        if (!userWallet) return { success: true, data: [] };
+
+        const userTransactions = this.db.transactions
+            .filter(t => t.fromWalletId === userWallet.id || t.toWalletId === userWallet.id)
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        
+        return { success: true, data: userTransactions };
+    }
 }
-
-// In a real app, you would have more service classes like this.
-// class AirtelMoneyService { /* ... */ }
-// class BankOfKigaliService { /* ... */ }
-
-// The PaymentGateway abstracts away the specific payment provider.
-class PaymentGateway {
-  private providers: Map<string, any> = new Map();
-
-  constructor() {
-    // We only instantiate the MTN service for this simulation.
-    this.providers.set('MTN', new MTNMobileMoneyService());
-    this.providers.set('AIRTEL', new MTNMobileMoneyService()); // Use MTN as mock
-    this.providers.set('BK', new MTNMobileMoneyService()); // Use MTN as mock
-    this.providers.set('EQUITY', new MTNMobileMoneyService()); // Use MTN as mock
-    this.providers.set('PAYPAL', new MTNMobileMoneyService()); // Use MTN as mock
-    this.providers.set('STRIPE', new MTNMobileMoneyService()); // Use MTN as mock
-  }
-
-  public async processPayment(provider: string, request: PaymentRequest): Promise<PaymentResponse> {
-    const paymentProvider = this.providers.get(provider);
-    if (!paymentProvider) {
-      throw new Error(`Unsupported provider: ${provider}`);
-    }
-
-    console.log(`Processing payment via gateway for provider: ${provider}`);
-    
-    const result = await paymentProvider.initiatePayment(request);
-
-    if (!result.success) {
-        throw new Error(result.message || 'Payment processing failed.');
-    }
-
-    // Here you would record the transaction in your own database.
-    console.log('Transaction successful, recording to internal ledger...');
-    
-    return result;
-  }
-}
-
-export const paymentGateway = new PaymentGateway();

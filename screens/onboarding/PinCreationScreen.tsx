@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Delete } from 'lucide-react';
+import { Delete } from 'lucide-react';
 
 interface PinCreationScreenProps {
-    onPinSet: (pin: string) => void;
+    onNext: (pin: string) => void;
 }
 
 const PinDot: React.FC<{ isActive: boolean }> = ({ isActive }) => (
@@ -15,7 +15,7 @@ const KeypadButton: React.FC<{ value: string; onClick: (value: string) => void; 
     </button>
 );
 
-const PinCreationScreen: React.FC<PinCreationScreenProps> = ({ onPinSet }) => {
+const PinCreationScreen: React.FC<PinCreationScreenProps> = ({ onNext }) => {
     const [step, setStep] = useState(1); // 1 for create, 2 for confirm
     const [pin, setPin] = useState('');
     const [confirmPin, setConfirmPin] = useState('');
@@ -27,7 +27,7 @@ const PinCreationScreen: React.FC<PinCreationScreenProps> = ({ onPinSet }) => {
         }
         if (step === 2 && confirmPin.length === 6) {
             if (pin === confirmPin) {
-                onPinSet(pin);
+                onNext(pin);
             } else {
                 setError('PINs do not match. Please start over.');
                 setTimeout(() => {
@@ -38,7 +38,7 @@ const PinCreationScreen: React.FC<PinCreationScreenProps> = ({ onPinSet }) => {
                 }, 1500);
             }
         }
-    }, [pin, confirmPin, step, onPinSet]);
+    }, [pin, confirmPin, step, onNext]);
 
     const handleKeyPress = (value: string) => {
         if (value === 'del') {

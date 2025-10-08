@@ -1,25 +1,24 @@
 import React, { useState } from 'react';
 import { useUserStore } from '../../hooks/useUserStore';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const LoginScreen: React.FC = () => {
     const navigate = useNavigate();
-    const { login } = useUserStore();
-    const [phone, setPhone] = useState('+25078');
-    const [pin, setPin] = useState('');
-    const [error, setError] = useState('');
+    const { login, error } = useUserStore();
+    const [phone, setPhone] = useState('250788123456'); // Pre-fill for demo
+    const [pin, setPin] = useState('123456'); // Pre-fill for demo
     const [isLoading, setIsLoading] = useState(false);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        setError('');
         try {
-            await login(phone, pin);
+            await login({ phone, pin });
             // On success, App.tsx will handle navigation to the dashboard
-        } catch (err: any) {
-            setError(err.message || 'Invalid credentials. Please try again.');
+        } catch (err) {
+            // Error is handled globally in useUserStore
+            console.error(err);
         } finally {
             setIsLoading(false);
         }
@@ -27,7 +26,7 @@ const LoginScreen: React.FC = () => {
 
     return (
         <div className="p-6 flex flex-col h-full bg-backgroundDark text-white">
-            <button onClick={() => navigate('/welcome')} className="mb-8 text-white self-start">
+            <button onClick={() => navigate('/auth/welcome')} className="mb-8 text-white self-start">
                 <ArrowLeft className="w-6 h-6" />
             </button>
             <form onSubmit={handleLogin} className="flex-grow flex flex-col">
@@ -70,6 +69,12 @@ const LoginScreen: React.FC = () => {
                 >
                     {isLoading ? <Loader2 className="animate-spin" /> : 'Log In'}
                 </button>
+                 <p className="text-center text-sm text-gray-400 mt-4">
+                    Don't have an account?{' '}
+                    <Link to="/auth/register" className="font-semibold text-primary hover:underline">
+                        Sign Up
+                    </Link>
+                </p>
             </form>
         </div>
     );

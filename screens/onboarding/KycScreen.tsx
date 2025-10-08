@@ -1,26 +1,48 @@
 import React, { useState } from 'react';
+import { useUserStore } from '../../hooks/useUserStore';
+import type { RegisterDto } from '../../types';
 
 interface KycScreenProps {
-    onCompleted: (name: string, nationalId: string) => void;
+    regData: Partial<RegisterDto>;
+    onNext: () => void;
 }
 
-const KycScreen: React.FC<KycScreenProps> = ({ onCompleted }) => {
+const KycScreen: React.FC<KycScreenProps> = ({ regData, onNext }) => {
+    const { register, error } = useUserStore();
     const [name, setName] = useState('');
     const [nationalId, setNationalId] = useState('');
-    const [error, setError] = useState('');
+    const [formError, setFormError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (name.trim().split(' ').length < 2) {
-            setError('Please enter your full name.');
+            setFormError('Please enter your full name.');
             return;
         }
         if (nationalId.length !== 16) {
-            setError('Please enter a valid 16-digit National ID.');
+            setFormError('Please enter a valid 16-digit National ID.');
             return;
         }
-        setError('');
-        onCompleted(name, nationalId);
+        setFormError('');
+        setIsLoading(true);
+
+        const finalData: RegisterDto = {
+            ...regData,
+            name,
+            nationalId,
+        } as RegisterDto;
+
+        try {
+            await register(finalData);
+            alert('Registration Successful! Please log in.');
+            onNext(); // Navigate to login
+        } catch (e) {
+            // Error is handled in the store, but we can also set local form error
+            setFormError(error || 'An unexpected error occurred.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -57,11 +79,11 @@ const KycScreen: React.FC<KycScreenProps> = ({ onCompleted }) => {
                     </div>
                 </div>
 
-                {error && <p className="mt-4 text-sm text-error">{error}</p>}
+                {(formError || error) && <p className="mt-4 text-sm text-error">{formError || error}</p>}
                 
                 <div className="flex-grow" />
-                <button type="submit" className="w-full bg-primary text-white font-bold py-4 rounded-lg hover:bg-primaryDark">
-                    Complete Setup
+                <button type="submit" disabled={isLoading} className="w-full bg-primary text-white font-bold py-4 rounded-lg hover:bg-primaryDark disabled:bg-primary/50">
+                    {isLoading ? 'Creating Account...' : 'Complete Setup'}
                 </button>
             </form>
         </div>
