@@ -1,118 +1,123 @@
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { apiGateway } from '../services/apiGateway';
-import type { User, Wallet, LoginDto, RegisterDto, Tokens } from '../types';
+import type { User, Wallet, LoginDto, RegisterDto } from '../types';
 
 type Theme = 'light' | 'dark' | 'system';
 
 interface UserState {
-    user: User | null;
-    wallet: Wallet | null;
-    tokens: Tokens | null;
-    isAuthenticated: boolean;
-    isOffline: boolean;
-    theme: Theme;
-    error: string | null;
-    isLoading: boolean;
-    login: (dto: LoginDto) => Promise<void>;
-    register: (dto: RegisterDto) => Promise<void>;
-    logout: () => void;
-    setTheme: (theme: Theme) => void;
-    toggleOfflineMode: () => void;
-    refreshWallet: () => Promise<void>;
+  user: User | null;
+  wallet: Wallet | null;
+  token: string | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
+  theme: Theme;
+  isOffline: boolean;
+
+  // Actions
+  login: (credentials: LoginDto) => Promise<void>;
+  register: (data: RegisterDto) => Promise<void>;
+  logout: () => void;
+  rehydrate: () => void;
+  refreshWallet: () => Promise<void>;
+  setTheme: (theme: Theme) => void;
+  toggleOfflineMode: () => void;
 }
 
 export const useUserStore = create<UserState>()(
-    persist(
-        (set, get) => ({
-            user: null,
-            wallet: null,
-            tokens: null,
-            isAuthenticated: false,
-            isOffline: false,
-            theme: 'system',
-            error: null,
-            isLoading: false,
+  persist(
+    (set, get) => ({
+      user: null,
+      wallet: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: true, // Start with loading true to check for persisted token
+      error: null,
+      theme: 'system',
+      isOffline: false,
 
-            login: async (dto: LoginDto) => {
-                set({ isLoading: true, error: null });
-                try {
-                    const response = await apiGateway.auth.login(dto);
-                    if (response.success) {
-                        const { user, wallet, tokens } = response.data;
-                        apiGateway.setAuthToken(tokens.accessToken);
-                        set({
-                            user,
-                            wallet,
-                            tokens,
-                            isAuthenticated: true,
-                            isLoading: false,
-                        });
-                    }
-                } catch (err: any) {
-                    const error = err.message || 'Login failed.';
-                    set({ error, isLoading: false, isAuthenticated: false });
-                    throw new Error(error);
-                }
-            },
-            
-            register: async (dto: RegisterDto) => {
-                set({ isLoading: true, error: null });
-                 try {
-                    const response = await apiGateway.auth.register(dto);
-                    if (response.success) {
-                        // Don't auto-login, let them go to the login screen
-                        set({ isLoading: false });
-                    }
-                } catch (err: any) {
-                    const error = err.message || 'Registration failed.';
-                    set({ error, isLoading: false });
-                    throw new Error(error);
-                }
-            },
-
-            logout: () => {
-                apiGateway.setAuthToken(null);
-                set({
-                    user: null,
-                    wallet: null,
-                    tokens: null,
-                    isAuthenticated: false,
-                    error: null,
-                });
-            },
-            
-            setTheme: (theme: Theme) => {
-                set({ theme });
-            },
-
-            toggleOfflineMode: () => {
-                 set(state => ({ isOffline: !state.isOffline }));
-            },
-
-            refreshWallet: async () => {
-                const { user } = get();
-                if (!user) return;
-                try {
-                    const response = await apiGateway.wallet.getWalletByUserId(user.id);
-                    if (response.success && response.data) {
-                        set({ wallet: response.data });
-                    }
-                } catch (err) {
-                    console.error("Failed to refresh wallet:", err);
-                }
-            }
-        }),
-        {
-            name: 'smart-pay-user-storage', // key in storage
-            partialize: (state) => ({ 
-                user: state.user, 
-                wallet: state.wallet,
-                tokens: state.tokens,
-                isAuthenticated: state.isAuthenticated,
-                theme: state.theme
-            }), // only persist these parts of the state
+      rehydrate: () => {
+        const token = get().token;
+        if (token) {
+          apiGateway.setAuthToken(token);
+          set({ isAuthenticated: true, isLoading: true });
+          apiGateway.auth.getProfile()
+            .then(res => {
+              if (res.success) {
+                set({ user: res.data });
+                get().refreshWallet();
+              } else {
+                get().logout();
+              }
+            })
+            .catch(() => get().logout())
+            .finally(() => set({ isLoading: false }));
+        } else {
+          set({ isLoading: false });
         }
-    )
+      },
+      
+      login: async (credentials) => {
+        set({ isLoading: true, error: null });
+        try {
+          const res = await apiGateway.auth.login(credentials);
+          if (res.success) {
+            const { user, token, wallet } = res.data;
+            apiGateway.setAuthToken(token);
+            set({ user, token, wallet, isAuthenticated: true, error: null });
+          }
+        } catch (err: any) {
+          set({ error: err.message });
+          throw err;
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      register: async (data) => {
+        set({ isLoading: true, error: null });
+        try {
+            await apiGateway.auth.register(data);
+        } catch (err: any) {
+            set({ error: err.message });
+            throw err;
+        } finally {
+            set({ isLoading: false });
+        }
+      },
+
+      logout: () => {
+        apiGateway.setAuthToken(null);
+        set({ user: null, token: null, wallet: null, isAuthenticated: false });
+      },
+
+      refreshWallet: async () => {
+        const userId = get().user?.id;
+        if (!userId) return;
+        try {
+          const res = await apiGateway.wallet.getWalletByUserId(userId);
+          if (res.success && res.data) {
+            set({ wallet: res.data });
+          }
+        } catch (err) {
+          console.error("Failed to refresh wallet", err);
+        }
+      },
+
+      setTheme: (theme) => {
+        set({ theme });
+      },
+      
+      toggleOfflineMode: () => {
+        set(state => ({ isOffline: !state.isOffline }));
+      }
+    }),
+    {
+      name: 'smartpay-user-storage',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ token: state.token, theme: state.theme }), // Only persist token and theme
+    }
+  )
 );

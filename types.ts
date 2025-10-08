@@ -1,24 +1,11 @@
 
-export interface ApiResponse<T> {
-    success: boolean;
-    data: T;
-    error?: string;
-}
-
-export interface Tokens {
-    accessToken: string;
-    refreshToken: string;
-}
-
 export interface User {
     id: string;
     phone: string;
     name: string;
-    pin: string; // Hashed in a real app
     nationalId: string;
-    kycStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
-    role: 'USER' | 'AGENT' | 'MERCHANT' | 'ADMIN';
-    permissions: string[];
+    pin: string; // Hashed in a real app
+    isAdmin?: boolean;
     createdAt: string;
 }
 
@@ -31,83 +18,61 @@ export interface Wallet {
     createdAt: string;
 }
 
-export type TransactionType = 'P2P' | 'TOPUP' | 'WITHDRAWAL' | 'BILL_PAYMENT' | 'MERCHANT_PAYMENT' | 'SAVINGS' | 'INSURANCE';
-
 export interface Transaction {
     id: string;
-    fromWalletId: string; // 'EXTERNAL' for top-ups
-    toWalletId: string;   // 'EXTERNAL' for withdrawals
+    fromWalletId: string;
+    toWalletId: string;
     amount: number;
     fee: number;
     currency: 'RWF';
-    status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'FLAGGED' | 'CANCELLED';
-    type: TransactionType;
-    provider?: string; // e.g., 'MTN', 'Airtel'
+    status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'FLAGGED';
+    type: 'P2P' | 'TOPUP' | 'PAYMENT' | 'WITHDRAWAL';
+    description?: string;
+    provider?: string;
     providerReference?: string;
-    description: string;
     createdAt: string;
 }
 
-export interface LoginDto {
-    phone: string;
-    pin: string;
+export interface SavingsGoal {
+    id: string;
+    userId: string;
+    name: string;
+    targetAmount: number;
+    currentAmount: number;
+    deadline?: string;
+    createdAt: string;
 }
 
-export interface RegisterDto {
-    phone: string;
-    pin: string;
-    name: string;
-    nationalId: string;
+export interface InsurancePolicy {
+    id: string;
+    userId: string;
+    provider: string;
+    type: 'Health' | 'Auto' | 'Home' | 'Life';
+    policyNumber: string;
+    coverage: number;
+    premium: number;
+    status: 'Active' | 'Expired' | 'Cancelled';
+    startDate: string;
+    endDate: string;
 }
+
+export interface ApiResponse<T> {
+    success: boolean;
+    data: T;
+    error?: string;
+}
+
+// Data Transfer Objects (DTOs)
+export type LoginDto = Pick<User, 'phone' | 'pin'>;
+export type RegisterDto = Pick<User, 'phone' | 'pin' | 'name' | 'nationalId'>;
 
 export interface PaymentDto {
-    fromUserId: string;
-    toPhone: string;
+    fromUserId?: string;
+    toPhone?: string;
     amount: number;
     description?: string;
-    pin: string;
-    provider?: string; // for topups
-}
-
-export interface ZeroTrustContext {
-    userId: string;
-    deviceId: string;
-    ipAddress: string;
-    operation: 'LOGIN' | 'HIGH_VALUE_TRANSFER';
-}
-
-export interface ZeroTrustResult {
-    allowed: boolean;
-    riskScore: number;
-    requiresStepUp: boolean; // e.g., requires OTP or biometric
-}
-
-export interface PaymentRoute {
-    provider: string;
-    cost: number;
-    speed: number; // in seconds
-    reliability: number; // 0-1
-    successRate: number; // 0-1
-}
-
-export interface BusinessIntelligence {
-    timestamp: string;
-    dailyTransactionVolume: number;
-    newUserSignups: number;
-    totalRevenue: number;
-    highRiskTransactions: number;
-}
-
-export interface FinancialInsights {
-    spendingByCategory: { category: string; amount: number }[];
-    incomeVsExpense: { month: string; income: number; expense: number }[];
-    savingsRate: number; // percentage
-}
-
-export interface NotificationPayload {
-    userId: string;
-    message: string;
-    type: 'success' | 'error' | 'info';
+    pin?: string;
+    provider?: string; // For top-ups, etc.
 }
 
 export interface RelationshipNode {
@@ -116,7 +81,20 @@ export interface RelationshipNode {
     transactionCount: number;
     totalSent: number;
     totalReceived: number;
-    strength: number; // 0-1 score
+    strength: number; // 0 to 1
+}
+
+export interface FinancialInsights {
+    spendingByCategory: { category: string; amount: number }[];
+    incomeVsExpense: { month: string; income: number; expense: number }[];
+    savingsRate: number;
+}
+
+export interface BusinessIntelligence {
+    dailyTransactionVolume: number;
+    newUserSignups: number;
+    totalRevenue: number;
+    highRiskTransactions: number;
 }
 
 export interface FinancialHealthPrediction {
@@ -128,7 +106,7 @@ export interface FinancialHealthPrediction {
 export interface FraudAnalysis {
     isFraud: boolean;
     riskScore: number; // 0-1
-    confidence: number; // 0-1
+    confidence: number;
     recommendedAction: 'ALLOW' | 'CHALLENGE' | 'BLOCK';
 }
 
@@ -139,38 +117,22 @@ export interface ComplianceCheck {
     requiresManualReview: boolean;
 }
 
-export interface SavingsGoal {
-    id: string;
-    userId: string;
-    name: string;
-    targetAmount: number;
-    currentAmount: number;
-    deadline: string;
-    createdAt: string;
-}
-
-export interface InsurancePolicy {
-    id: string;
-    userId: string;
+export interface PaymentRoute {
     provider: string;
-    type: 'Health' | 'Life' | 'Auto' | 'Home';
-    premium: number;
-    coverage: number;
-    status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
-    startDate: string;
-    endDate: string;
+    cost: number;
+    speed: number;
+    reliability: number;
+
+}
+export interface NotificationPayload {
+    userId: string;
+    message: string;
+    type: 'success' | 'error' | 'info';
 }
 
-export interface CryptoAsset {
+export interface PaymentProvider {
     id: string;
     name: string;
-    symbol: string;
-    price: number;
-    change24h: number; // percentage
-}
-
-export interface CryptoHolding {
-    assetId: string;
-    amount: number;
-    valueInRwf: number;
+    type: 'momo' | 'bank' | 'card';
+    logo: string;
 }
