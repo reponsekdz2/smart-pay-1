@@ -51,6 +51,10 @@ import AdminDashboardScreen from './screens/admin/AdminDashboardScreen.tsx';
 import AdminLoginScreen from './screens/admin/AdminLoginScreen.tsx';
 import UserManagementScreen from './screens/admin/UserManagementScreen.tsx';
 import TransactionManagementScreen from './screens/admin/TransactionManagementScreen.tsx';
+import SecurityManagementScreen from './screens/admin/SecurityManagementScreen.tsx';
+import SettingsManagementScreen from './screens/admin/SettingsManagementScreen.tsx';
+import DeveloperManagementScreen from './screens/admin/DeveloperManagementScreen.tsx';
+
 
 // A component to handle theme application
 const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -144,7 +148,9 @@ const AdminRoutes = () => (
             <Route path="dashboard" element={<AdminDashboardScreen />} />
             <Route path="users" element={<UserManagementScreen />} />
             <Route path="transactions" element={<TransactionManagementScreen />} />
-            {/* ... other admin routes */}
+            <Route path="security" element={<SecurityManagementScreen />} />
+            <Route path="settings" element={<SettingsManagementScreen />} />
+            <Route path="developer" element={<DeveloperManagementScreen />} />
         </Route>
         <Route index element={<Navigate to="dashboard" />} />
     </Routes>
