@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { Bell, ScanLine, ArrowUpRight, Download, SlidersHorizontal, ArrowDownLeft, ShoppingCart, Power, HelpCircle, Bot } from 'lucide-react';
 import Card from '../components/Card';
@@ -66,6 +67,27 @@ const DashboardScreen: React.FC = () => {
         return Math.round((income / (income + spending)) * 100);
     }, [user.transactions]);
 
+    const { monthlyIncome, monthlyExpenses } = useMemo(() => {
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
+        let income = 0;
+        let expenses = 0;
+
+        for (const tx of user.transactions) {
+            const txDate = new Date(tx.date);
+            if (txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear) {
+                if (tx.amount > 0) {
+                    income += tx.amount;
+                } else {
+                    expenses += Math.abs(tx.amount);
+                }
+            }
+        }
+        return { monthlyIncome: income, monthlyExpenses: expenses };
+    }, [user.transactions]);
+
 
     return (
         <div className="bg-background min-h-full relative">
@@ -95,6 +117,30 @@ const DashboardScreen: React.FC = () => {
                     </div>
                     <div className="w-24 h-24 -mr-2">
                         <FinancialHealthChart score={financialHealthScore} />
+                    </div>
+                </Card>
+
+                <Card>
+                    <div className="flex justify-around items-center">
+                        <div className="flex items-center space-x-3">
+                            <div className="bg-green-100 text-success p-2 rounded-full">
+                                <ArrowDownLeft className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-textSecondary">Income</p>
+                                <p className="font-bold text-lg text-success">{monthlyIncome.toLocaleString()} RWF</p>
+                            </div>
+                        </div>
+                        <div className="h-10 border-l border-gray-200"></div>
+                        <div className="flex items-center space-x-3">
+                             <div className="bg-red-100 text-error p-2 rounded-full">
+                                <ArrowUpRight className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-textSecondary">Expenses</p>
+                                <p className="font-bold text-lg text-error">{monthlyExpenses.toLocaleString()} RWF</p>
+                            </div>
+                        </div>
                     </div>
                 </Card>
 
