@@ -13,27 +13,30 @@ import SendMoneyScreen from './screens/SendMoneyScreen';
 import OnboardingFlow from './screens/onboarding/OnboardingFlow';
 import BottomNav from './components/BottomNav';
 import SplashScreen from './screens/SplashScreen';
-import TopUpScreen from './screens/TopUpScreen'; // Import the new screen
+import TopUpScreen from './screens/TopUpScreen';
+import QRScannerScreen from './screens/QRScannerScreen'; // Import the new screen
 
 // Custom hook to reliably track Zustand hydration status using the official persist API
 const useHydration = () => {
     const [hydrated, setHydrated] = useState(false);
 
     useEffect(() => {
-        // `onFinishHydration` returns a function to unsubscribe
-        const unsub = useUserStore.persist.onFinishHydration(() => {
-            setHydrated(true);
-        });
-
         // Check if hydration is already complete
         if (useUserStore.persist.hasHydrated()) {
             setHydrated(true);
+            return;
         }
 
+        // If not, subscribe to the onFinishHydration event
+        const unsub = useUserStore.persist.onFinishHydration(() => {
+            setHydrated(true);
+        });
+        
+        // Cleanup subscription on unmount
         return () => {
             unsub();
         };
-    }, []);
+    }, []); // Empty dependency array ensures this effect runs only once on mount
 
     return hydrated;
 };
@@ -80,7 +83,8 @@ const Main: React.FC = () => {
         );
     }
     
-    const showNav = !location.pathname.startsWith('/send-money') && !location.pathname.startsWith('/top-up');
+    const pathsWithoutNav = ['/send-money', '/top-up', '/qr-scanner'];
+    const showNav = !pathsWithoutNav.some(path => location.pathname.startsWith(path));
 
     const navItems = [
         { path: '/dashboard', icon: Home, label: 'Home' },
@@ -101,6 +105,7 @@ const Main: React.FC = () => {
                     <Route path="/profile" element={<ProfileScreen />} />
                     <Route path="/send-money" element={<SendMoneyScreen />} />
                     <Route path="/top-up" element={<TopUpScreen />} />
+                    <Route path="/qr-scanner" element={<QRScannerScreen />} />
                     <Route path="*" element={<Navigate to="/dashboard" />} />
                 </Routes>
             </div>

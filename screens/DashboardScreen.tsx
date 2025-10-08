@@ -1,10 +1,11 @@
-import React, { useMemo } from 'react';
-import { Bell, ScanLine, ArrowUpRight, Download, SlidersHorizontal, ArrowDownLeft, ShoppingCart, Power, HelpCircle } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Bell, ScanLine, ArrowUpRight, Download, SlidersHorizontal, ArrowDownLeft, ShoppingCart, Power, HelpCircle, Bot } from 'lucide-react';
 import Card from '../components/Card';
 import type { Transaction, TransactionIconType } from '../types';
 import { useUserStore } from '../hooks/useUserStore';
 import { Link } from 'react-router-dom';
 import FinancialHealthChart from '../components/charts/FinancialHealthChart';
+import SmartAssistantScreen from './SmartAssistantScreen'; // Import the new screen
 
 const QuickActionButton: React.FC<{ icon: React.ElementType; label: string; to?: string }> = ({ icon: Icon, label, to }) => {
     const content = (
@@ -49,6 +50,7 @@ const TransactionItem: React.FC<{ transaction: Transaction }> = ({ transaction }
 
 const DashboardScreen: React.FC = () => {
     const { user } = useUserStore();
+    const [isAssistantOpen, setAssistantOpen] = useState(false);
 
     const financialHealthScore = useMemo(() => {
         const income = user.transactions
@@ -66,7 +68,7 @@ const DashboardScreen: React.FC = () => {
 
 
     return (
-        <div className="bg-background min-h-full">
+        <div className="bg-background min-h-full relative">
             <header className="bg-surface p-4 flex justify-between items-center">
                  <div className="flex items-center space-x-3">
                     <img
@@ -100,7 +102,7 @@ const DashboardScreen: React.FC = () => {
                     <div className="grid grid-cols-4 gap-4 text-center">
                         <QuickActionButton icon={ArrowUpRight} label="Send" to="/send-money" />
                         <QuickActionButton icon={Download} label="Request" />
-                        <QuickActionButton icon={ScanLine} label="Pay" />
+                        <QuickActionButton icon={ScanLine} label="Pay" to="/qr-scanner"/>
                         <QuickActionButton icon={SlidersHorizontal} label="More" />
                     </div>
                 </Card>
@@ -121,6 +123,16 @@ const DashboardScreen: React.FC = () => {
                     </Card>
                 </div>
             </main>
+
+            <button
+                onClick={() => setAssistantOpen(true)}
+                className="absolute bottom-20 right-4 bg-primary text-white rounded-full p-4 shadow-lg hover:bg-primaryDark transition-transform transform hover:scale-110"
+                aria-label="Open Smart Assistant"
+            >
+                <Bot className="w-6 h-6" />
+            </button>
+            
+            {isAssistantOpen && <SmartAssistantScreen onClose={() => setAssistantOpen(false)} />}
         </div>
     );
 };

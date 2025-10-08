@@ -27,7 +27,7 @@ const PaymentsScreen: React.FC = () => {
             <div className="p-4 space-y-4">
                 <FeatureButton to="/top-up" icon={Wallet} title="Top Up Wallet" subtitle="Add money from MTN, Banks, or Cards" />
                 <FeatureButton to="/send-money" icon={Send} title="Send Money" subtitle="To phone, bank, or QR code" />
-                <FeatureButton icon={QrCode} title="Scan to Pay" subtitle="Use your camera to pay merchants" />
+                <FeatureButton to="/qr-scanner" icon={QrCode} title="Scan to Pay" subtitle="Use your camera to pay merchants" />
                 <FeatureButton icon={Users} title="Split Bills" subtitle="Share expenses with friends" />
                 <FeatureButton icon={Calendar} title="Scheduled Payments" subtitle="Automate your future transfers" />
                 <FeatureButton icon={LinkIcon} title="Payment Links" subtitle="Generate a link to get paid" />

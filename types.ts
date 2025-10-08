@@ -40,7 +40,7 @@ export interface NavItem {
 export type ProviderCategory = 'MOBILE_MONEY' | 'BANKS' | 'INTERNATIONAL';
 
 export interface PaymentProvider {
-    id: string;
+    id:string;
     name: string;
     icon: LucideIcon;
     category: ProviderCategory;
@@ -53,4 +53,10 @@ export interface PaymentProvider {
         type: 'text' | 'number' | 'tel'; 
         placeholder: string; 
     }[];
+}
+
+// New type for AI Assistant
+export interface ChatMessage {
+    role: 'user' | 'model';
+    text: string;
 }
